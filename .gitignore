@@ -1,0 +1,23 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# Datasets: never commit frames, clips or model artefacts — keep the placeholder READMEs.
+data/*
+!data/README.md
+!data/real_frames/
+!data/synthetic/
+data/real_frames/*
+!data/real_frames/README.md
+data/synthetic/*
+!data/synthetic/README.md
+
+*.engine
+*.plan
+*.nemo
+*.gguf
+checkpoints/
+outputs/
+*.log
+.DS_Store
