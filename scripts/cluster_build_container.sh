@@ -3,14 +3,21 @@
 # Prereqs: export HF_TOKEN=hf_... (licences for nvidia/Cosmos3-Nano accepted on huggingface.co)
 set -euo pipefail
 : "${HF_TOKEN:?export HF_TOKEN=hf_... first}"
-export WORK=$HOME/codefest
-mkdir -p $WORK/hf-cache $WORK/repo
+export TEAM=${TEAM:-/storage/hackathon_teams/omc-team15}
+export WORK=${WORK:-$TEAM/codefest}
+# enroot must not use /run/user/<uid> (not writable on dgx01) and home is only 50 GB: keep the big stuff on team storage
+# runtime path should be node-local (enroot creates mounts under it); data/cache are the big ones and go on the share
+export ENROOT_RUNTIME_PATH=${ENROOT_RUNTIME_PATH:-/tmp/enroot-$USER/run}
+export ENROOT_DATA_PATH=${ENROOT_DATA_PATH:-$TEAM/enroot/data}
+export ENROOT_CACHE_PATH=${ENROOT_CACHE_PATH:-$TEAM/enroot/cache}
+export XDG_RUNTIME_DIR=$ENROOT_RUNTIME_PATH
+mkdir -p $ENROOT_RUNTIME_PATH $ENROOT_DATA_PATH $ENROOT_CACHE_PATH $WORK/hf-cache $WORK/repo
 module load python312 py-uv tree 2>/dev/null || true
 
 srun --gres=gpu:1 --time=01:30:00 --job-name=build --pty \
   --container-image=nvcr.io#nvidia/pytorch:25.08-py3 \
   --container-name=ubr \
-  --container-mounts=$HOME:$HOME \
+  --container-mounts=$HOME:$HOME,$TEAM:$TEAM \
   --container-workdir=$WORK \
   --container-env=HF_TOKEN \
   bash -c '
