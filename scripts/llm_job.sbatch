@@ -6,13 +6,20 @@ set -uo pipefail
 export TEAM=${TEAM:-/storage/hackathon_teams/omc-team15}
 export WORK=${WORK:-$TEAM/codefest}
 export ENROOT_RUNTIME_PATH=/tmp/enroot-$USER/run XDG_RUNTIME_DIR=/tmp/enroot-$USER/run   # /run/user/<uid> is unwritable on DGX nodes
+# Scratch: node-local /tmp is 1.6 TB free at 1.9 GB/s; team storage is NFS from dgx02 at 871 MB/s, and CUDA JIT
+# plus enroot unpacking are latency-sensitive. (.bashrc sets TMPDIR for interactive shells only -- it returns early
+# when non-interactive, which is why every script must set this itself.) Note /tmp INSIDE the container is tmpfs,
+# i.e. RAM (1008 GB cap on a 1.8 TB node): fast, but do not write hundreds of GB of scratch there.
+export TMPDIR=${TMPDIR_OVERRIDE:-/tmp/$USER}; mkdir -p "$TMPDIR"
+export PIP_CACHE_DIR=${PIP_CACHE_DIR:-$TEAM/pip-cache}   # keep pip wheels off the 50 GB home quota
 MODEL=${MODEL:-nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16}
 PORT=${PORT:-8150}          # 8000 is taken by other teams on the shared nodes
 GPU_FRAC=${GPU_FRAC:-0.35}  # ~96 GB of 275: weights 64 GB + KV cache; leaves ~180 GB for the overlapping steps
 echo "== start $(date -Is) job $SLURM_JOB_ID node $(hostname) git $(git -C $WORK/repo rev-parse HEAD) container ubr port $PORT gpu_frac $GPU_FRAC"
 srun --container-name=ubr --container-mounts=$HOME:$HOME,$TEAM:$TEAM --container-workdir=$WORK \
   bash -c '
-export HF_HOME=$WORK/hf-cache HF_HUB_OFFLINE=1 PATH=$HOME/.local/bin:$PATH
+export HF_HOME=$WORK/hf-cache HF_HUB_OFFLINE=1 PATH=$HOME/.local/bin:$PATH TMPDIR=/tmp/$USER
+mkdir -p $TMPDIR
 nvidia-smi -L
 SNAP=$(python -c "from huggingface_hub import snapshot_download; print(snapshot_download(\"'"$MODEL"'\"))")
 exec vllm serve "'"$MODEL"'" --served-model-name nemotron \

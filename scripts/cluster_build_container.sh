@@ -12,6 +12,12 @@ export ENROOT_RUNTIME_PATH=${ENROOT_RUNTIME_PATH:-/tmp/enroot-$USER/run}
 export ENROOT_DATA_PATH=${ENROOT_DATA_PATH:-$TEAM/enroot/data}
 export ENROOT_CACHE_PATH=${ENROOT_CACHE_PATH:-$TEAM/enroot/cache}
 export XDG_RUNTIME_DIR=$ENROOT_RUNTIME_PATH
+# Scratch: node-local /tmp is 1.6 TB free at 1.9 GB/s; team storage is NFS from dgx02 at 871 MB/s, and CUDA JIT
+# plus enroot unpacking are latency-sensitive. (.bashrc sets TMPDIR for interactive shells only -- it returns early
+# when non-interactive, which is why every script must set this itself.) Note /tmp INSIDE the container is tmpfs,
+# i.e. RAM (1008 GB cap on a 1.8 TB node): fast, but do not write hundreds of GB of scratch there.
+export TMPDIR=${TMPDIR_OVERRIDE:-/tmp/$USER}; mkdir -p "$TMPDIR"
+export PIP_CACHE_DIR=${PIP_CACHE_DIR:-$TEAM/pip-cache}   # keep pip wheels off the 50 GB home quota
 mkdir -p $ENROOT_RUNTIME_PATH $ENROOT_DATA_PATH $ENROOT_CACHE_PATH $WORK/hf-cache $WORK/repo
 module load python312 py-uv tree 2>/dev/null || true
 
@@ -27,7 +33,8 @@ export HF_HOME='"$WORK"'/hf-cache
 echo "== GPU"; nvidia-smi -L
 # pip has no write access to the container site-packages, so it falls back to a --user install whose bin dir
 # ($HOME/.local/bin) is not on PATH. Put it there rather than calling console scripts by bare name.
-export PATH=$HOME/.local/bin:$PATH
+export PATH=$HOME/.local/bin:$PATH TMPDIR=/tmp/$USER PIP_CACHE_DIR='"$TEAM"'/pip-cache
+mkdir -p $TMPDIR
 echo "== python deps"
 pip install -U pip
 # One pip invocation: pip resolves each run independently, so a second run can silently downgrade the first.
