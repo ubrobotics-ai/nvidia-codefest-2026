@@ -6,7 +6,8 @@ set -euo pipefail
 export TEAM=${TEAM:-/storage/hackathon_teams/omc-team15}
 export WORK=${WORK:-$TEAM/codefest}
 # enroot must not use /run/user/<uid> (not writable on dgx01) and home is only 50 GB: keep the big stuff on team storage
-# runtime path should be node-local (enroot creates mounts under it); data/cache are the big ones and go on the share
+# NOTE: pyxis does NOT honour these ENROOT_* vars (enroot runs under slurmd). They are kept for direct `enroot` use only.
+# The effective fix is symlinking ~/.cache/enroot and ~/.local/share/enroot to $TEAM/enroot/{cache,data} — see docs.
 export ENROOT_RUNTIME_PATH=${ENROOT_RUNTIME_PATH:-/tmp/enroot-$USER/run}
 export ENROOT_DATA_PATH=${ENROOT_DATA_PATH:-$TEAM/enroot/data}
 export ENROOT_CACHE_PATH=${ENROOT_CACHE_PATH:-$TEAM/enroot/cache}
@@ -24,15 +25,26 @@ srun --gres=gpu:1 --time=01:30:00 --job-name=build --pty \
 set -e
 export HF_HOME='"$WORK"'/hf-cache
 echo "== GPU"; nvidia-smi -L
+# pip has no write access to the container site-packages, so it falls back to a --user install whose bin dir
+# ($HOME/.local/bin) is not on PATH. Put it there rather than calling console scripts by bare name.
+export PATH=$HOME/.local/bin:$PATH
 echo "== python deps"
 pip install -U pip
-pip install -U "diffusers>=0.36" transformers accelerate imageio[ffmpeg] huggingface_hub cosmos_guardrail
-pip install -U "vllm[omni]" || pip install -U vllm
-[ -d '"$WORK"'/cosmos-framework ] || git clone https://github.com/NVIDIA/cosmos-framework.git '"$WORK"'/cosmos-framework
-pip install -e '"$WORK"'/cosmos-framework
+# One pip invocation: pip resolves each run independently, so a second run can silently downgrade the first.
+pip install -U "diffusers>=0.36" transformers accelerate imageio[ffmpeg] huggingface_hub cosmos_guardrail "vllm[omni]" \
+  || pip install -U "diffusers>=0.36" transformers accelerate imageio[ffmpeg] huggingface_hub cosmos_guardrail vllm
+# cosmos-framework is deliberately NOT installed: cosmos_i2v_batch.py drives Cosmos 3 through Diffusers
+# (Cosmos3OmniPipeline), and cosmos-framework 1.2.2 pins transformers<5 / huggingface_hub<1, which downgrades
+# both out from under vllm (needs transformers>=5.10.4) and cosmos_guardrail (needs transformers>=5.0.0).
+echo "== dependency check"
+pip check || echo "[warn] pip check reported conflicts above - fix before trusting this container"
 echo "== models"
-huggingface-cli download nvidia/Cosmos3-Nano
-huggingface-cli download nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16
+python - <<PY
+from huggingface_hub import snapshot_download
+for repo in ("nvidia/Cosmos3-Nano", "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"):
+    print("downloading", repo, flush=True)
+    snapshot_download(repo)
+PY
 echo "== sanity"
 python - <<PY
 import torch, diffusers, transformers, vllm
