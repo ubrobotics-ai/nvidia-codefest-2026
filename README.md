@@ -8,15 +8,17 @@ the mission then runs entirely on the edge (Jetson Orin Nano), so the robot keep
 or drops. Feeding it is a hybrid data pipeline — real UGV/UAV footage plus synthetic scenes — and that pipeline is
 what runs on the cluster.
 
-This repository holds **only the scripts that run on the NVIDIA B300 nodes**. Edge/robot code and project
-documentation live elsewhere.
+This repository holds **the scripts that feed that pipeline** — the ones that run on the NVIDIA B300 nodes, plus the
+data-preparation tooling that runs against local recordings. Edge/robot code, datasets and project documentation live
+elsewhere; nothing here contains or references recorded data.
 
 ## Scripts
 
 | Script | What it does |
 |---|---|
-| [`scripts/cluster_build_container.sh`](scripts/cluster_build_container.sh) | Builds the named pyxis container `ubr` once — NGC PyTorch base + Diffusers, vLLM and the Cosmos Framework — and pre-downloads the model weights. |
+| [`scripts/cluster_build_container.sh`](scripts/cluster_build_container.sh) | Builds the named pyxis container `ubr` once — NGC PyTorch base + Diffusers and vLLM — and pre-downloads the model weights. |
 | [`scripts/cosmos_i2v_batch.py`](scripts/cosmos_i2v_batch.py) | Generates N image→video clips with Cosmos 3 from real UGV frames, four condition variants (day, dusk smoke, night, dense smoke), and times every clip. |
+| [`scripts/blackbox_index.py`](scripts/blackbox_index.py) | Indexes rover blackbox recordings (runs locally, not on the cluster): ffprobes each segment, flags standby-splash segments by luminance, joins motion events to the archive they belong to, and writes a CSV with per-segment metadata. |
 
 ## Environment
 
