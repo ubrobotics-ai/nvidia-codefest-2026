@@ -40,11 +40,25 @@ echo "== dependency check"
 pip check || echo "[warn] pip check reported conflicts above - fix before trusting this container"
 echo "== models"
 python - <<PY
+import pathlib
 from huggingface_hub import snapshot_download
 for repo in ("nvidia/Cosmos3-Nano", "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"):
     print("downloading", repo, flush=True)
     snapshot_download(repo)
+# Cosmos3OmniPipeline.__init__ builds the cosmos_guardrail CosmosSafetyChecker, which fetches these three at
+# construction time. Mirror its exact calls (cosmos_guardrail.py, SigLIPEncoder / Blocklist / RetinaFace /
+# Qwen3Guard) so a later HF_HUB_OFFLINE=1 run finds them in the cache.
+print("downloading nvidia/Cosmos-1.0-Guardrail (+ siglip, Qwen3Guard)", flush=True)
+g = snapshot_download("nvidia/Cosmos-1.0-Guardrail",
+                      allow_patterns=["blocklist/*", "video_content_safety_filter/*", "face_blur_filter/Resnet50_Final.pth"])
+snapshot_download("google/siglip-so400m-patch14-384", cache_dir=(pathlib.Path(g) / "video_content_safety_filter").as_posix())
+snapshot_download("Qwen/Qwen3Guard-Gen-0.6B")
 PY
+# nltk>=3.10 (pathsec) refuses to open symlinked data files and group-writable roots, which is exactly what the HF cache
+# on team storage is. Give the guardrail a real-file copy of its nltk_data in $HOME and point NLTK_DATA at it at run time.
+G=$(python -c "from huggingface_hub import snapshot_download; print(snapshot_download(\"nvidia/Cosmos-1.0-Guardrail\", allow_patterns=[\"blocklist/*\"]))")
+rm -rf $HOME/nltk_data && cp -rL "$G/blocklist/nltk_data" $HOME/nltk_data && chmod -R u+rwX,go+rX,go-w $HOME/nltk_data
+echo "nltk_data materialised at $HOME/nltk_data (export NLTK_DATA=\$HOME/nltk_data when running the guardrail)"
 echo "== sanity"
 python - <<PY
 import torch, diffusers, transformers, vllm
