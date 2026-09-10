@@ -18,6 +18,16 @@ python scripts/select_frame_slices.py \
 `slices_manifest.json` carries the SHA-256 of each CSV. If a number cannot be reproduced, check the digest first —
 a silently regenerated slice is the likeliest cause.
 
+## Manual annotation
+
+`l1_slice_v1_labels.csv` and `calib_slice_v1_labels.csv` hold the human pass: one row per frame, keyed by `file`,
+with `posture_confirmed`, `anyone_lying` and `notes`. They start empty.
+
+They are **separate files on purpose**. The slice CSVs are frozen artefacts whose SHA-256 is recorded in the
+manifest and quoted whenever a number is disputed; adding a column would change that digest and silently invalidate
+the check described above. Annotations change often, the frozen list never does, so they live apart and join on
+`file`.
+
 ## Guards
 
 **At most 2 frames per segment.** A rover segment is one continuous run, so its frames share lighting, location and
