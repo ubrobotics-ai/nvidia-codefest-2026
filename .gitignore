@@ -13,6 +13,13 @@ data/real_frames/*
 data/synthetic/*
 !data/synthetic/README.md
 
+# Frozen frame-id slices ARE tracked -- they are lists of filenames, not images, and every bake-off number is
+# meaningless without them. The frames they name stay ignored above.
+!data/slices/
+!data/slices/*.csv
+!data/slices/*.json
+!data/slices/README.md
+
 *.engine
 *.plan
 *.nemo

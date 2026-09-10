@@ -1,0 +1,22 @@
+{
+  "index": "frames_index.csv",
+  "index_frames": 2223,
+  "index_segments": 512,
+  "max_per_segment": 2,
+  "min_hamming": 12,
+  "l1": {
+    "file": "l1_slice_v1.csv",
+    "n": 474,
+    "segments": 363,
+    "seed": 0,
+    "sha256_16": "749b5196c8dd7349"
+  },
+  "calib": {
+    "file": "calib_slice_v1.csv",
+    "n": 256,
+    "segments": 171,
+    "seed": 17,
+    "sha256_16": "95f1e5a7aafea76b"
+  },
+  "disjoint": true
+}
