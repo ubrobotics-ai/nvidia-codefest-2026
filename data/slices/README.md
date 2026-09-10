@@ -6,7 +6,7 @@ are not** — they show identifiable people and stay private (see the privacy no
 | slice | file | frames | segments | seed | purpose |
 |---|---|---|---|---|---|
 | **L1** | `l1_slice_v1.csv` | 474 | 363 | 0 | frozen evaluation set — every bake-off number is quoted against this |
-| **Calibration** | `calib_slice_v1.csv` | 256 | 171 | 17 | INT4 AWQ activation-range fitting only |
+| **Calibration** | `calib_slice_v1.csv` | 198 | 149 | 17 | INT4 AWQ activation-range fitting only |
 
 Regenerate both with:
 
@@ -42,9 +42,21 @@ test assumes. The guard is applied across the entire slice, not within each segm
 second. A plain shuffle-and-greedy selection reaches the same 474 frames over only 309 segments; filling by rank
 reaches 363 — more independent scenes for the same evaluation cost.
 
-**Calibration is disjoint from L1, and the selector asserts it.** INT4 AWQ is activation-aware: it fits ranges to
-whatever it is calibrated on. Any overlap would flatter the quantised model on precisely the frames used to judge
-it, and the quantisation delta would be worthless. Calibration is drawn only from what L1 did not take.
+**Calibration is disjoint from L1 at SEGMENT level, and the selector asserts both.** INT4 AWQ is
+activation-aware: it fits ranges to whatever it is calibrated on. Frame-level disjointness is not sufficient — a
+different frame of the same continuous run is the same place, lighting and people, so calibrating on it still fits
+the quantiser to the scene it will be judged on. Calibration therefore draws only from the 149 segments L1 never
+touched.
+
+**Calibration uses the index's native dedupe level (Hamming ≥ 6), not L1's ≥ 12.** The stricter bar buys independence
+for paired tests on the evaluation slice; calibration only estimates activation ranges, where near-duplicates are
+harmless. Holding calibration to ≥ 12 makes a segment-disjoint slice impossible: the 149 free segments contain 230
+frames in total, and **none** of them clears 12 bits against all 474 L1 hashes.
+
+**Why 198 and not 256.** 198 is the maximum available under segment-disjointness with at most 2 frames per segment.
+The specification asked for 256 frames over 256 distinct segments; this index cannot supply it, because L1 occupies
+363 of the 512 segments. Segment-disjointness was kept and the count reduced, rather than the reverse — a smaller
+calibration set costs range-fitting precision, while a leaking one costs the validity of the delta itself.
 
 ## Power
 

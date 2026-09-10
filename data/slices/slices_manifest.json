@@ -4,6 +4,8 @@
   "index_segments": 512,
   "max_per_segment": 2,
   "min_hamming": 12,
+  "calib_min_hamming": 6,
+  "segment_disjoint": true,
   "l1": {
     "file": "l1_slice_v1.csv",
     "n": 474,
@@ -13,10 +15,10 @@
   },
   "calib": {
     "file": "calib_slice_v1.csv",
-    "n": 256,
-    "segments": 171,
+    "n": 198,
+    "segments": 149,
     "seed": 17,
-    "sha256_16": "95f1e5a7aafea76b"
+    "sha256_16": "1a44db215e4a1a2e"
   },
   "disjoint": true
 }

@@ -13,7 +13,9 @@ Guards, in the order they are applied:
                     whole slice rather than within a segment. The index is already deduped at Hamming <= 6; 12 is a
                     deliberately stricter bar for an evaluation set, where near-duplicates would silently correlate
                     the errors that a paired test assumes are independent.
-  disjointness      the calibration slice is drawn from what L1 did not take, and the result is asserted disjoint.
+  disjointness      calibration is drawn only from SEGMENTS L1 never touched, and both frame- and segment-level
+                    disjointness are asserted. Frame-level alone is insufficient -- a different frame of the same
+                    continuous run is the same scene, lighting and people.
                     INT4 AWQ fits activation ranges to its calibration data, so any overlap would flatter the
                     quantised model on exactly the frames used to judge it.
 """
@@ -57,6 +59,11 @@ def main():
     ap.add_argument("--l1-n", type=int, default=474); ap.add_argument("--l1-seed", type=int, default=0)
     ap.add_argument("--calib-n", type=int, default=256); ap.add_argument("--calib-seed", type=int, default=17)
     ap.add_argument("--max-per-segment", type=int, default=2); ap.add_argument("--min-hamming", type=int, default=12)
+    # Calibration uses the index's native dedupe level, not L1's stricter bar. The Hamming >= 12 guard buys
+    # independence for PAIRED TESTS on the evaluation slice; calibration only fits activation ranges, where
+    # near-duplicates are harmless. Holding calibration to 12 makes a segment-disjoint slice impossible: the 149
+    # segments L1 leaves free contain 230 frames, and none clears 12 bits against all 474 L1 hashes.
+    ap.add_argument("--calib-min-hamming", type=int, default=6)
     a = ap.parse_args()
     rows = list(csv.DictReader(open(a.index)))
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
@@ -64,11 +71,20 @@ def main():
 
     l1, l1_hashes = select(rows, a.l1_n, a.l1_seed, a.max_per_segment, a.min_hamming)
     l1_files = {r["file"] for r in l1}
-    calib, _ = select(rows, a.calib_n, a.calib_seed, a.max_per_segment, a.min_hamming,
-                      taken=l1_files, taken_hashes=l1_hashes)
-    calib_files = {r["file"] for r in calib}
+    l1_segs = {r["segment"] for r in l1}
 
-    assert not (l1_files & calib_files), "L1 and calibration overlap"
+    # Calibration is drawn only from segments L1 never touched. Frame-level disjointness is not enough: a segment is
+    # one continuous run sharing lighting, place and people, so calibrating on a different frame of an L1 segment
+    # still fits AWQ's activation ranges to the scene it will be judged on. 149 segments are free of L1.
+    free = [r for r in rows if r["segment"] not in l1_segs]
+    calib, _ = select(free, a.calib_n, a.calib_seed, a.max_per_segment, a.calib_min_hamming,
+                      taken=l1_files, taken_hashes=())
+    calib_files = {r["file"] for r in calib}
+    calib_segs = {r["segment"] for r in calib}
+
+    assert not (l1_files & calib_files), "L1 and calibration share a frame"
+    assert not (l1_segs & calib_segs), "L1 and calibration share a segment"
+    print(f"segment disjointness: L1 {len(l1_segs)} segs, calib {len(calib_segs)} segs, overlap 0")
     for name, sel in (("l1", l1), ("calib", calib)):
         segs = {r["segment"] for r in sel}
         counts = {}
@@ -88,6 +104,7 @@ def main():
     meta = {"index": os.path.basename(a.index), "index_frames": len(rows),
             "index_segments": len({r["segment"] for r in rows}),
             "max_per_segment": a.max_per_segment, "min_hamming": a.min_hamming,
+            "calib_min_hamming": a.calib_min_hamming, "segment_disjoint": True,
             "l1": write("l1", l1, a.l1_seed), "calib": write("calib", calib, a.calib_seed),
             "disjoint": True}
     (out / "slices_manifest.json").write_text(json.dumps(meta, indent=2))
