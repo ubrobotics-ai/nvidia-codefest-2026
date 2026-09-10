@@ -49,17 +49,24 @@ def install_audit():
         AUDIT["uint8_before"] = sum(
             1 for m in mods if getattr(m._buffers.get("weight"), "dtype", None) == torch.uint8)
         original(model)
-        bad = [(n, tuple(m._buffers["weight"].shape), str(m._buffers["weight"].dtype))
-               for n, m in model.named_modules()
-               if isinstance(m, ModelOptAWQPrepackedLinear)
-               and m._buffers.get("weight") is not None
-               and m._buffers["weight"].dtype != torch.int8]
+        # dtype alone is not enough: 56 MLP tensors previously passed this check while being all-zero
+        # buffers at the packed shape. Check dtype, the cuteDSL fragment shape (K dim == 512), and content.
+        bad = []
+        for n, mod in model.named_modules():
+            if not isinstance(mod, ModelOptAWQPrepackedLinear): continue
+            w = mod._buffers.get("weight")
+            if w is None: continue
+            why = []
+            if w.dtype != torch.int8: why.append(f"dtype={w.dtype}")
+            if w.dim() == 2 and w.shape[1] != 512: why.append(f"not fragment shape {tuple(w.shape)}")
+            if int(w.abs().sum()) == 0: why.append("ALL ZERO")
+            if why: bad.append((n, tuple(w.shape), " · ".join(why)))
         AUDIT["bad_after"] = bad
         print(f"\n[audit] ModelOptAWQPrepackedLinear modules: {AUDIT['modules']}", flush=True)
         print(f"[audit] holding uint8 weights BEFORE repack: {AUDIT['uint8_before']}", flush=True)
-        print(f"[audit] NOT int8 AFTER repack: {len(bad)}", flush=True)
-        for n, shp, dt in bad[:5]:
-            print(f"[audit]     {n}  {dt} {shp}", flush=True)
+        print(f"[audit] FAILING (dtype / shape / all-zero): {len(bad)}", flush=True)
+        for n, shp, why in bad[:6]:
+            print(f"[audit]     {n}  {shp}  <- {why}", flush=True)
         if bad:
             pre = collections.Counter(k.split(".")[0] + "." + k.split(".")[1]
                                       for k in AUDIT["skipped_keys"] if "." in k)
@@ -68,7 +75,7 @@ def install_audit():
             for k in AUDIT["skipped_keys"][:5]:
                 print(f"[audit]     skipped: {k}", flush=True)
             raise SystemExit(
-                f"\nFAIL: {len(bad)} INT4 linears still hold non-int8 weights after repacking.\n"
+                f"\nFAIL: {len(bad)} INT4 linears are not correctly packed after repacking.\n"
                 "The plugin nodes would be emitted around dense FP16 tensors and the ONNX would be\n"
                 "unbuildable on the target -- which is exactly the 2026-09-10 defect. Aborting instead\n"
                 "of writing another plausible-looking broken artefact.")
@@ -79,32 +86,37 @@ def install_audit():
 
 
 def install_key_remap_fix():
-    """Teach the Cosmos3-Edge remap about the ModelOpt-quantised layout.
+    """Add the MLP rename the Cosmos3-Edge remap is missing.
 
-    `_cosmos3_edge_llm_key_remap` was written for the *native* checkpoint, whose text tower is flat
-    (`layers.N.*`, `embed_tokens.weight`, `norm.weight`) -- its docstring says so. A ModelOpt AWQ export nests the
-    same tower under `model.language_model.*`, so the function's `startswith(("layers.", ...))` test is False,
-    the key passes through unmapped, and `_set_tensor` then fails to bind it against a module tree that wants
-    `model.layers.N.*`. The loader counts that as a skip and says nothing above DEBUG, which is how 471 tensors
-    went missing without an error.
+    `_cosmos3_edge_llm_key_remap` renames the four attention projections from the checkpoint's Qwen-VL style
+    (`to_q/to_k/to_v/to_out`) onto the module tree's `q_proj/k_proj/v_proj/o_proj`. It renames nothing in the MLP —
+    but the checkpoint stores `mlp.fc1` / `mlp.fc2` while `modeling_und_prefill.py` builds `mlp.up_proj` /
+    `mlp.down_proj`. So all 56 MLP weights (2 per layer x 28) fail to bind, silently, and the modules keep the
+    zero-filled INT8 buffers they were constructed with.
+
+    The result passes a dtype check and an `onnx.checker` run: the graph carries 169 INT4 plugin nodes and 169
+    INT8 tensors, of which 56 are **entirely zero** and still at the packed shape rather than the cuteDSL
+    fragment shape. Every MLP in the decoder is a zero matrix.
+
+    The visual tower also uses `mlp.fc1/fc2`, but those keys are dropped earlier by the `visual.` filter, so this
+    rename cannot touch them.
     """
     from tensorrt_edgellm.scripts import export as _ex
     original = _ex._cosmos3_edge_llm_key_remap
-    NEST = "model.language_model."
 
     def fixed(key):
-        if key.startswith(NEST):
-            key = "model." + key[len(NEST):]
+        if "visual." not in key and "projector." not in key:
+            key = key.replace(".mlp.fc1.", ".mlp.up_proj.").replace(".mlp.fc2.", ".mlp.down_proj.")
         return original(key)
 
     _ex._cosmos3_edge_llm_key_remap = fixed
-    print("[fix] _cosmos3_edge_llm_key_remap wrapped: strips 'model.language_model.' -> 'model.'", flush=True)
+    print("[fix] remap extended: mlp.fc1 -> mlp.up_proj, mlp.fc2 -> mlp.down_proj", flush=True)
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     install_audit()
-    if os.environ.get("EDGELLM_FIX_REMAP", "0") == "1":
+    if os.environ.get("EDGELLM_FIX_REMAP", "1") == "1":
         install_key_remap_fix()
     from tensorrt_edgellm.scripts.export import main
     sys.argv[0] = "tensorrt-edgellm-export"
