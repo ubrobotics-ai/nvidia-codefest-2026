@@ -12,7 +12,7 @@ Regenerate both with:
 
 ```bash
 python scripts/select_frame_slices.py \
-  --index $TEAM/data/blackbox_frames/frames_index.csv --out data/slices
+  --index /path/to/your/frames_index.csv --out data/slices
 ```
 
 `slices_manifest.json` carries the SHA-256 of each CSV. If a number cannot be reproduced, check the digest first —
