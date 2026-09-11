@@ -1,0 +1,78 @@
+{
+  "frozen_at": "2026-09-11T14:57:32",
+  "purpose": "Baseline for the command/tool/schema SFT. Every number below is a property of THIS checkpoint. An SFT re-fits the AWQ calibration and rebuilds the engines, so all of it must be re-measured before anything is republished.",
+  "repos": {
+    "codefest": "758ef60878000e50897733f808fd624ae9787dad",
+    "edge_llm_base": "e8b29522938901f6df19ebeedd4b69bc8edbcd97",
+    "edge_llm_patches": "NVIDIA/TensorRT-Edge-LLM #205 + #207 (unmerged)"
+  },
+  "artefacts": {
+    "awq_checkpoint": {
+      "path": "$WORK/edge/Cosmos3-Edge/quantized-int4-awq-v2/model.safetensors",
+      "bytes": 2408300272,
+      "sha256": "2a2dcfc196e48930c0d0c663029d32910e9f0802c55151e9dd5d96b6f5729872"
+    },
+    "onnx_llm_data": {
+      "path": "$WORK/edge/Cosmos3-Edge/onnx-v3/llm/model.onnx.data",
+      "bytes": 866451480,
+      "sha256": "88cfa2d14db8c4cf789fd4a6bd085248efbd298e4019d2983652348ce4875e29"
+    },
+    "calib_override": {
+      "path": "$WORK/edge/calib_int4_mmmu_override.jsonl",
+      "bytes": 42570,
+      "sha256": "aaf9e186d4123f0c6b4e36a9bcf6fe321d1017a020c7ca0b48a3f8238d175fee"
+    }
+  },
+  "gates_L0": {
+    "instrument": "scripts/l0_trt_eval.py + scripts/l0_report.py, 1,442 items",
+    "distance_pct": 18.52,
+    "left_right_pct": 64.0,
+    "mcq_pct": 16.45,
+    "task_mean_d_lr": 41.26,
+    "k_global": 1.2148,
+    "k_by_bucket": {
+      "[0,4)": 1.1277,
+      "[4,8)": 1.2486,
+      "[8,12)": 1.1516,
+      "[12,+)": 1.335
+    },
+    "vs_bf16_paired_mcnemar_p": {
+      "distance_own_k": 0.931,
+      "left_right": 0.724,
+      "mcq": 0.451
+    },
+    "left_right_order_invariance_pct": 65.6
+  },
+  "gates_L1": {
+    "source": "REPORT_L1.md, Jetson Orin Nano 8GB",
+    "targets_at_iou_0_5": "9-10 of 12",
+    "false_triggers": "0 of 14",
+    "schema_valid": "0 of 24",
+    "commands": "13/15, stops 5/5 (thinking off)",
+    "tools_correct_arguments": "1 of 10",
+    "decode_tok_s": 52.8,
+    "engines_gib": 2.24
+  },
+  "holdout_never_train": [
+    "the 24-item grounded benchmark",
+    "the 60 frozen frames",
+    "the lw-lab1 judge set",
+    "the 15-item command set",
+    "the two 20-case directional sets",
+    "the 1,442 L0 items including the 500 left_right"
+  ],
+  "holdout_phrases": [
+    "Turn to starboard",
+    "Withdraw",
+    "Go forward",
+    "Proceed",
+    "Continue onward",
+    "Sing me a song",
+    "Stop!",
+    "Stop right now",
+    "Freeze!",
+    "Halt immediately",
+    "Don't move",
+    "Drive forward"
+  ]
+}

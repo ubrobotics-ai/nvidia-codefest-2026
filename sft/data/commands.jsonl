@@ -1,0 +1,890 @@
+{"instruction": "please what's 17 plus 25 right away", "label": "UNKNOWN"}
+{"instruction": "okay go right right away", "label": "RIGHT"}
+{"instruction": "robot, retreat immediately", "label": "BACK"}
+{"instruction": "quickly hold!", "label": "STOP"}
+{"instruction": "quickly check the space please", "label": "SEARCH"}
+{"instruction": "right, press on now", "label": "FORWARD"}
+{"instruction": "robot, scan the area.", "label": "SEARCH"}
+{"instruction": "can you roll forward.", "label": "FORWARD"}
+{"instruction": "okay hard right right away", "label": "RIGHT"}
+{"instruction": "head on now", "label": "FORWARD"}
+{"instruction": "can you what's your favourite colour", "label": "UNKNOWN"}
+{"instruction": "can you brake please", "label": "STOP"}
+{"instruction": "okay turn right please", "label": "RIGHT"}
+{"instruction": "can you pause now", "label": "STOP"}
+{"instruction": "robot, pull out!", "label": "BACK"}
+{"instruction": "quickly translate this now", "label": "UNKNOWN"}
+{"instruction": "quickly go left immediately", "label": "LEFT"}
+{"instruction": "right, read me the news right away", "label": "UNKNOWN"}
+{"instruction": "please spin right immediately", "label": "RIGHT"}
+{"instruction": "quickly scan the area please", "label": "SEARCH"}
+{"instruction": "right, stop moving", "label": "STOP"}
+{"instruction": "please look around", "label": "SEARCH"}
+{"instruction": "now call my mother immediately", "label": "UNKNOWN"}
+{"instruction": "right, give me an update now", "label": "REPORT"}
+{"instruction": "please head on", "label": "FORWARD"}
+{"instruction": "now hard left.", "label": "LEFT"}
+{"instruction": "right, call my mother please", "label": "UNKNOWN"}
+{"instruction": "okay swing right.", "label": "RIGHT"}
+{"instruction": "robot, move up.", "label": "FORWARD"}
+{"instruction": "robot, turn right", "label": "RIGHT"}
+{"instruction": "right, make coffee immediately", "label": "UNKNOWN"}
+{"instruction": "right, find anyone down!", "label": "SEARCH"}
+{"instruction": "robot, head left please", "label": "LEFT"}
+{"instruction": "right, go straight!", "label": "FORWARD"}
+{"instruction": "can you tell me a joke!", "label": "UNKNOWN"}
+{"instruction": "robot, halt", "label": "STOP"}
+{"instruction": "quickly back up now", "label": "BACK"}
+{"instruction": "quickly report.", "label": "REPORT"}
+{"instruction": "okay look around right away", "label": "SEARCH"}
+{"instruction": "please ahead please", "label": "FORWARD"}
+{"instruction": "please stand by.", "label": "STOP"}
+{"instruction": "right, tell me a joke.", "label": "UNKNOWN"}
+{"instruction": "robot, stand by immediately", "label": "STOP"}
+{"instruction": "can you take a left right away", "label": "LEFT"}
+{"instruction": "okay take a right!", "label": "RIGHT"}
+{"instruction": "quickly wait there immediately", "label": "STOP"}
+{"instruction": "robot, what's the weather please", "label": "UNKNOWN"}
+{"instruction": "quickly press on please", "label": "FORWARD"}
+{"instruction": "can you find anyone down now", "label": "SEARCH"}
+{"instruction": "robot, spin right right away", "label": "RIGHT"}
+{"instruction": "robot, play some music", "label": "UNKNOWN"}
+{"instruction": "solve this equation immediately", "label": "UNKNOWN"}
+{"instruction": "robot, go right now", "label": "RIGHT"}
+{"instruction": "can you wait there right away", "label": "STOP"}
+{"instruction": "please head on right away", "label": "FORWARD"}
+{"instruction": "robot, play some music immediately", "label": "UNKNOWN"}
+{"instruction": "can you head right immediately", "label": "RIGHT"}
+{"instruction": "okay status.", "label": "REPORT"}
+{"instruction": "quickly stop now", "label": "STOP"}
+{"instruction": "quickly tell me a joke!", "label": "UNKNOWN"}
+{"instruction": "now check the space.", "label": "SEARCH"}
+{"instruction": "quickly cease now", "label": "STOP"}
+{"instruction": "what do you see immediately", "label": "REPORT"}
+{"instruction": "robot, go right immediately", "label": "RIGHT"}
+{"instruction": "okay turn left immediately", "label": "LEFT"}
+{"instruction": "okay find anyone down immediately", "label": "SEARCH"}
+{"instruction": "now status", "label": "REPORT"}
+{"instruction": "now go left please", "label": "LEFT"}
+{"instruction": "quickly look around", "label": "SEARCH"}
+{"instruction": "robot, play some music.", "label": "UNKNOWN"}
+{"instruction": "can you order a pizza immediately", "label": "UNKNOWN"}
+{"instruction": "quickly make coffee", "label": "UNKNOWN"}
+{"instruction": "right, all stop right away", "label": "STOP"}
+{"instruction": "head straight on please", "label": "FORWARD"}
+{"instruction": "can you get moving forward!", "label": "FORWARD"}
+{"instruction": "okay go straight", "label": "FORWARD"}
+{"instruction": "quickly search ahead now", "label": "SEARCH"}
+{"instruction": "now sing something please", "label": "UNKNOWN"}
+{"instruction": "okay retreat!", "label": "BACK"}
+{"instruction": "robot, translate this right away", "label": "UNKNOWN"}
+{"instruction": "robot, drive on!", "label": "FORWARD"}
+{"instruction": "now read me the news.", "label": "UNKNOWN"}
+{"instruction": "robot, what's there!", "label": "REPORT"}
+{"instruction": "right, go on ahead immediately", "label": "FORWARD"}
+{"instruction": "quickly go straight", "label": "FORWARD"}
+{"instruction": "stop moving please", "label": "STOP"}
+{"instruction": "now onward!", "label": "FORWARD"}
+{"instruction": "robot, look around!", "label": "SEARCH"}
+{"instruction": "now carry on ahead please", "label": "FORWARD"}
+{"instruction": "can you who are you please", "label": "UNKNOWN"}
+{"instruction": "please read me the news!", "label": "UNKNOWN"}
+{"instruction": "okay head right please", "label": "RIGHT"}
+{"instruction": "can you book a flight!", "label": "UNKNOWN"}
+{"instruction": "now swing left.", "label": "LEFT"}
+{"instruction": "robot, read me the news now", "label": "UNKNOWN"}
+{"instruction": "can you stop.", "label": "STOP"}
+{"instruction": "robot, make coffee please", "label": "UNKNOWN"}
+{"instruction": "move back", "label": "BACK"}
+{"instruction": "give me an update", "label": "REPORT"}
+{"instruction": "take a left please", "label": "LEFT"}
+{"instruction": "right, what do you see!", "label": "REPORT"}
+{"instruction": "okay what time is it", "label": "UNKNOWN"}
+{"instruction": "now advance please", "label": "FORWARD"}
+{"instruction": "right, bear left right away", "label": "LEFT"}
+{"instruction": "robot, set an alarm please", "label": "UNKNOWN"}
+{"instruction": "quickly swing left", "label": "LEFT"}
+{"instruction": "okay set an alarm please", "label": "UNKNOWN"}
+{"instruction": "can you go on ahead", "label": "FORWARD"}
+{"instruction": "right, who are you please", "label": "UNKNOWN"}
+{"instruction": "quickly order a pizza!", "label": "UNKNOWN"}
+{"instruction": "can you what's there immediately", "label": "REPORT"}
+{"instruction": "robot, recite a poem!", "label": "UNKNOWN"}
+{"instruction": "now press on!", "label": "FORWARD"}
+{"instruction": "please who are you!", "label": "UNKNOWN"}
+{"instruction": "please drive on!", "label": "FORWARD"}
+{"instruction": "can you look around now", "label": "SEARCH"}
+{"instruction": "please pause", "label": "STOP"}
+{"instruction": "okay sweep for casualties right away", "label": "SEARCH"}
+{"instruction": "okay who are you please", "label": "UNKNOWN"}
+{"instruction": "right, keep going", "label": "FORWARD"}
+{"instruction": "robot, rotate right immediately", "label": "RIGHT"}
+{"instruction": "please hold position", "label": "STOP"}
+{"instruction": "okay how old are you please", "label": "UNKNOWN"}
+{"instruction": "okay book a flight right away", "label": "UNKNOWN"}
+{"instruction": "okay search ahead immediately", "label": "SEARCH"}
+{"instruction": "robot, come back immediately", "label": "BACK"}
+{"instruction": "okay what do you see", "label": "REPORT"}
+{"instruction": "who are you now", "label": "UNKNOWN"}
+{"instruction": "okay status right away", "label": "REPORT"}
+{"instruction": "call my mother.", "label": "UNKNOWN"}
+{"instruction": "can you advance immediately", "label": "FORWARD"}
+{"instruction": "please press on", "label": "FORWARD"}
+{"instruction": "okay back it up!", "label": "BACK"}
+{"instruction": "can you halt please", "label": "STOP"}
+{"instruction": "okay book a flight immediately", "label": "UNKNOWN"}
+{"instruction": "quickly ahead please now", "label": "FORWARD"}
+{"instruction": "now call my mother please", "label": "UNKNOWN"}
+{"instruction": "now status please", "label": "REPORT"}
+{"instruction": "quickly scan the area!", "label": "SEARCH"}
+{"instruction": "find anyone down right away", "label": "SEARCH"}
+{"instruction": "now stop moving immediately", "label": "STOP"}
+{"instruction": "please turn left now", "label": "LEFT"}
+{"instruction": "can you ahead please.", "label": "FORWARD"}
+{"instruction": "now hard right!", "label": "RIGHT"}
+{"instruction": "can you head left.", "label": "LEFT"}
+{"instruction": "can you fall back", "label": "BACK"}
+{"instruction": "quickly who are you immediately", "label": "UNKNOWN"}
+{"instruction": "right, move forwards please", "label": "FORWARD"}
+{"instruction": "quickly rotate right now", "label": "RIGHT"}
+{"instruction": "now sweep for casualties please", "label": "SEARCH"}
+{"instruction": "please status right away", "label": "REPORT"}
+{"instruction": "now press on right away", "label": "FORWARD"}
+{"instruction": "can you report!", "label": "REPORT"}
+{"instruction": "now back it up!", "label": "BACK"}
+{"instruction": "advance please", "label": "FORWARD"}
+{"instruction": "can you check the space!", "label": "SEARCH"}
+{"instruction": "can you take a right now", "label": "RIGHT"}
+{"instruction": "robot, right turn immediately", "label": "RIGHT"}
+{"instruction": "right, head straight on", "label": "FORWARD"}
+{"instruction": "robot, return now", "label": "BACK"}
+{"instruction": "right, swing right", "label": "RIGHT"}
+{"instruction": "right, what do you see", "label": "REPORT"}
+{"instruction": "right, look for a person please", "label": "SEARCH"}
+{"instruction": "quickly find anyone down.", "label": "SEARCH"}
+{"instruction": "please stop now", "label": "STOP"}
+{"instruction": "quickly pull out.", "label": "BACK"}
+{"instruction": "right, drive on right away", "label": "FORWARD"}
+{"instruction": "please status.", "label": "REPORT"}
+{"instruction": "okay report", "label": "REPORT"}
+{"instruction": "please pull out immediately", "label": "BACK"}
+{"instruction": "quickly how old are you please", "label": "UNKNOWN"}
+{"instruction": "quickly start moving forward immediately", "label": "FORWARD"}
+{"instruction": "right, onward!", "label": "FORWARD"}
+{"instruction": "quickly make coffee.", "label": "UNKNOWN"}
+{"instruction": "robot, let's move ahead", "label": "FORWARD"}
+{"instruction": "please bear right please", "label": "RIGHT"}
+{"instruction": "back away immediately", "label": "BACK"}
+{"instruction": "now call my mother", "label": "UNKNOWN"}
+{"instruction": "robot, order a pizza", "label": "UNKNOWN"}
+{"instruction": "please make coffee.", "label": "UNKNOWN"}
+{"instruction": "now what's the weather!", "label": "UNKNOWN"}
+{"instruction": "right, what time is it", "label": "UNKNOWN"}
+{"instruction": "robot, sing something immediately", "label": "UNKNOWN"}
+{"instruction": "can you take a right!", "label": "RIGHT"}
+{"instruction": "right, retreat right away", "label": "BACK"}
+{"instruction": "quickly give me an update!", "label": "REPORT"}
+{"instruction": "head on!", "label": "FORWARD"}
+{"instruction": "can you bear right!", "label": "RIGHT"}
+{"instruction": "can you recite a poem immediately", "label": "UNKNOWN"}
+{"instruction": "rotate right.", "label": "RIGHT"}
+{"instruction": "can you rotate right now", "label": "RIGHT"}
+{"instruction": "now move ahead immediately", "label": "FORWARD"}
+{"instruction": "okay search the room now", "label": "SEARCH"}
+{"instruction": "now describe the scene!", "label": "REPORT"}
+{"instruction": "now bear left.", "label": "LEFT"}
+{"instruction": "quickly what's your favourite colour", "label": "UNKNOWN"}
+{"instruction": "quickly read me the news please", "label": "UNKNOWN"}
+{"instruction": "okay what's 17 plus 25 please", "label": "UNKNOWN"}
+{"instruction": "okay head straight on right away", "label": "FORWARD"}
+{"instruction": "robot, hard right", "label": "RIGHT"}
+{"instruction": "right, onward.", "label": "FORWARD"}
+{"instruction": "turn left", "label": "LEFT"}
+{"instruction": "right, describe the scene right away", "label": "REPORT"}
+{"instruction": "robot, go right", "label": "RIGHT"}
+{"instruction": "now veer right", "label": "RIGHT"}
+{"instruction": "quickly what's your favourite colour.", "label": "UNKNOWN"}
+{"instruction": "please set an alarm right away", "label": "UNKNOWN"}
+{"instruction": "please move back right away", "label": "BACK"}
+{"instruction": "please hard left.", "label": "LEFT"}
+{"instruction": "okay veer right right away", "label": "RIGHT"}
+{"instruction": "right, rotate right now", "label": "RIGHT"}
+{"instruction": "now tell me a joke now", "label": "UNKNOWN"}
+{"instruction": "can you cease right away", "label": "STOP"}
+{"instruction": "now sing something", "label": "UNKNOWN"}
+{"instruction": "right, move forwards now", "label": "FORWARD"}
+{"instruction": "can you tell me a joke immediately", "label": "UNKNOWN"}
+{"instruction": "right, brake now", "label": "STOP"}
+{"instruction": "quickly status immediately", "label": "REPORT"}
+{"instruction": "right, recite a poem right away", "label": "UNKNOWN"}
+{"instruction": "look for a person now", "label": "SEARCH"}
+{"instruction": "right, what do you see right away", "label": "REPORT"}
+{"instruction": "okay what's your favourite colour please", "label": "UNKNOWN"}
+{"instruction": "right, brake immediately", "label": "STOP"}
+{"instruction": "please move forwards right away", "label": "FORWARD"}
+{"instruction": "make your way forward immediately", "label": "FORWARD"}
+{"instruction": "right, go left immediately", "label": "LEFT"}
+{"instruction": "please open the pod bay doors", "label": "UNKNOWN"}
+{"instruction": "right, what's there right away", "label": "REPORT"}
+{"instruction": "now hold now", "label": "STOP"}
+{"instruction": "okay hard right please", "label": "RIGHT"}
+{"instruction": "can you do a backflip now", "label": "UNKNOWN"}
+{"instruction": "robot, all stop now", "label": "STOP"}
+{"instruction": "quickly left turn immediately", "label": "LEFT"}
+{"instruction": "robot, go backwards!", "label": "BACK"}
+{"instruction": "okay search ahead.", "label": "SEARCH"}
+{"instruction": "now go left immediately", "label": "LEFT"}
+{"instruction": "right, get moving forward right away", "label": "FORWARD"}
+{"instruction": "quickly how old are you!", "label": "UNKNOWN"}
+{"instruction": "robot, come back please", "label": "BACK"}
+{"instruction": "quickly check the space right away", "label": "SEARCH"}
+{"instruction": "roll forward!", "label": "FORWARD"}
+{"instruction": "robot, pull back right away", "label": "BACK"}
+{"instruction": "can you back up", "label": "BACK"}
+{"instruction": "now return", "label": "BACK"}
+{"instruction": "right, veer left!", "label": "LEFT"}
+{"instruction": "robot, tell me what you found please", "label": "REPORT"}
+{"instruction": "please scan the area.", "label": "SEARCH"}
+{"instruction": "right, describe the scene!", "label": "REPORT"}
+{"instruction": "can you go right please", "label": "RIGHT"}
+{"instruction": "can you carry on ahead!", "label": "FORWARD"}
+{"instruction": "please set an alarm!", "label": "UNKNOWN"}
+{"instruction": "now what's there immediately", "label": "REPORT"}
+{"instruction": "now tell me what you found now", "label": "REPORT"}
+{"instruction": "robot, search the room now", "label": "SEARCH"}
+{"instruction": "please swing right right away", "label": "RIGHT"}
+{"instruction": "okay sweep for casualties now", "label": "SEARCH"}
+{"instruction": "please back off please", "label": "BACK"}
+{"instruction": "quickly bear right immediately", "label": "RIGHT"}
+{"instruction": "tell me a joke please", "label": "UNKNOWN"}
+{"instruction": "now retreat!", "label": "BACK"}
+{"instruction": "please how old are you.", "label": "UNKNOWN"}
+{"instruction": "now back away immediately", "label": "BACK"}
+{"instruction": "robot, recite a poem.", "label": "UNKNOWN"}
+{"instruction": "okay retreat", "label": "BACK"}
+{"instruction": "what's your favourite colour immediately", "label": "UNKNOWN"}
+{"instruction": "can you how old are you please", "label": "UNKNOWN"}
+{"instruction": "please read me the news right away", "label": "UNKNOWN"}
+{"instruction": "can you do a backflip immediately", "label": "UNKNOWN"}
+{"instruction": "move forwards immediately", "label": "FORWARD"}
+{"instruction": "quickly take us forward right away", "label": "FORWARD"}
+{"instruction": "right, drive on please", "label": "FORWARD"}
+{"instruction": "quickly rotate left right away", "label": "LEFT"}
+{"instruction": "head right immediately", "label": "RIGHT"}
+{"instruction": "okay get moving forward now", "label": "FORWARD"}
+{"instruction": "quickly go straight right away", "label": "FORWARD"}
+{"instruction": "now move ahead.", "label": "FORWARD"}
+{"instruction": "right, find anyone down right away", "label": "SEARCH"}
+{"instruction": "robot, start moving forward right away", "label": "FORWARD"}
+{"instruction": "right, reverse please!", "label": "BACK"}
+{"instruction": "robot, drive on.", "label": "FORWARD"}
+{"instruction": "quickly return now", "label": "BACK"}
+{"instruction": "please bear right now", "label": "RIGHT"}
+{"instruction": "can you what's 17 plus 25", "label": "UNKNOWN"}
+{"instruction": "okay spin right.", "label": "RIGHT"}
+{"instruction": "head left now", "label": "LEFT"}
+{"instruction": "quickly order a pizza.", "label": "UNKNOWN"}
+{"instruction": "okay what's 17 plus 25!", "label": "UNKNOWN"}
+{"instruction": "please back off.", "label": "BACK"}
+{"instruction": "robot, veer left.", "label": "LEFT"}
+{"instruction": "quickly find anyone down now", "label": "SEARCH"}
+{"instruction": "please head right.", "label": "RIGHT"}
+{"instruction": "now translate this right away", "label": "UNKNOWN"}
+{"instruction": "quickly sweep for casualties immediately", "label": "SEARCH"}
+{"instruction": "can you what do you see immediately", "label": "REPORT"}
+{"instruction": "right, search the room right away", "label": "SEARCH"}
+{"instruction": "okay find anyone down.", "label": "SEARCH"}
+{"instruction": "quickly drive on please", "label": "FORWARD"}
+{"instruction": "can you rotate right.", "label": "RIGHT"}
+{"instruction": "okay bear left please", "label": "LEFT"}
+{"instruction": "please stop", "label": "STOP"}
+{"instruction": "okay open the pod bay doors right away", "label": "UNKNOWN"}
+{"instruction": "robot, give me an update right away", "label": "REPORT"}
+{"instruction": "okay recite a poem now", "label": "UNKNOWN"}
+{"instruction": "quickly take a left right away", "label": "LEFT"}
+{"instruction": "robot, tell me a joke please", "label": "UNKNOWN"}
+{"instruction": "right, swing left.", "label": "LEFT"}
+{"instruction": "please bear left immediately", "label": "LEFT"}
+{"instruction": "right, scan the area immediately", "label": "SEARCH"}
+{"instruction": "right, go backwards.", "label": "BACK"}
+{"instruction": "robot, book a flight right away", "label": "UNKNOWN"}
+{"instruction": "please look around right away", "label": "SEARCH"}
+{"instruction": "quickly open the pod bay doors immediately", "label": "UNKNOWN"}
+{"instruction": "please give me an update.", "label": "REPORT"}
+{"instruction": "please reverse course", "label": "BACK"}
+{"instruction": "now roll forward right away", "label": "FORWARD"}
+{"instruction": "quickly hard right.", "label": "RIGHT"}
+{"instruction": "now wait there now", "label": "STOP"}
+{"instruction": "please let's move ahead now", "label": "FORWARD"}
+{"instruction": "please reverse course immediately", "label": "BACK"}
+{"instruction": "okay how old are you now", "label": "UNKNOWN"}
+{"instruction": "please search the room.", "label": "SEARCH"}
+{"instruction": "can you what's the weather immediately", "label": "UNKNOWN"}
+{"instruction": "make coffee.", "label": "UNKNOWN"}
+{"instruction": "right, press on right away", "label": "FORWARD"}
+{"instruction": "robot, veer right", "label": "RIGHT"}
+{"instruction": "robot, who are you", "label": "UNKNOWN"}
+{"instruction": "please what's your favourite colour right away", "label": "UNKNOWN"}
+{"instruction": "can you find anyone down", "label": "SEARCH"}
+{"instruction": "now how old are you right away", "label": "UNKNOWN"}
+{"instruction": "can you hold right away", "label": "STOP"}
+{"instruction": "status!", "label": "REPORT"}
+{"instruction": "robot, spin left!", "label": "LEFT"}
+{"instruction": "please reverse please.", "label": "BACK"}
+{"instruction": "robot, hard left.", "label": "LEFT"}
+{"instruction": "can you turn right!", "label": "RIGHT"}
+{"instruction": "now what's your favourite colour!", "label": "UNKNOWN"}
+{"instruction": "right, come back now", "label": "BACK"}
+{"instruction": "robot, left turn immediately", "label": "LEFT"}
+{"instruction": "now pause right away", "label": "STOP"}
+{"instruction": "robot, reverse please please", "label": "BACK"}
+{"instruction": "sweep for casualties now", "label": "SEARCH"}
+{"instruction": "now ahead please.", "label": "FORWARD"}
+{"instruction": "can you spin right now", "label": "RIGHT"}
+{"instruction": "now take a left right away", "label": "LEFT"}
+{"instruction": "move forwards.", "label": "FORWARD"}
+{"instruction": "quickly head straight on now", "label": "FORWARD"}
+{"instruction": "can you left turn please", "label": "LEFT"}
+{"instruction": "halt", "label": "STOP"}
+{"instruction": "please make your way forward", "label": "FORWARD"}
+{"instruction": "okay look for a person", "label": "SEARCH"}
+{"instruction": "now take us forward please", "label": "FORWARD"}
+{"instruction": "right, stand by right away", "label": "STOP"}
+{"instruction": "pull out now", "label": "BACK"}
+{"instruction": "right, swing right right away", "label": "RIGHT"}
+{"instruction": "please return now", "label": "BACK"}
+{"instruction": "robot, status please", "label": "REPORT"}
+{"instruction": "now solve this equation!", "label": "UNKNOWN"}
+{"instruction": "make your way forward now", "label": "FORWARD"}
+{"instruction": "quickly go backwards now", "label": "BACK"}
+{"instruction": "now pull back please", "label": "BACK"}
+{"instruction": "can you move back right away", "label": "BACK"}
+{"instruction": "can you book a flight", "label": "UNKNOWN"}
+{"instruction": "swing right now", "label": "RIGHT"}
+{"instruction": "report please", "label": "REPORT"}
+{"instruction": "robot, back off please", "label": "BACK"}
+{"instruction": "now who are you please", "label": "UNKNOWN"}
+{"instruction": "robot, spin left now", "label": "LEFT"}
+{"instruction": "okay what's the weather right away", "label": "UNKNOWN"}
+{"instruction": "can you turn left", "label": "LEFT"}
+{"instruction": "forward march immediately", "label": "FORWARD"}
+{"instruction": "okay reverse please!", "label": "BACK"}
+{"instruction": "quickly bear left right away", "label": "LEFT"}
+{"instruction": "right, go right.", "label": "RIGHT"}
+{"instruction": "please take a right!", "label": "RIGHT"}
+{"instruction": "okay take a right please", "label": "RIGHT"}
+{"instruction": "now turn left", "label": "LEFT"}
+{"instruction": "sweep for casualties right away", "label": "SEARCH"}
+{"instruction": "robot, go left", "label": "LEFT"}
+{"instruction": "right, hard left immediately", "label": "LEFT"}
+{"instruction": "quickly bear right.", "label": "RIGHT"}
+{"instruction": "press on.", "label": "FORWARD"}
+{"instruction": "pull out!", "label": "BACK"}
+{"instruction": "now straight ahead immediately", "label": "FORWARD"}
+{"instruction": "please head right!", "label": "RIGHT"}
+{"instruction": "quickly straight ahead", "label": "FORWARD"}
+{"instruction": "robot, head left right away", "label": "LEFT"}
+{"instruction": "now fall back!", "label": "BACK"}
+{"instruction": "now bear left right away", "label": "LEFT"}
+{"instruction": "can you make coffee.", "label": "UNKNOWN"}
+{"instruction": "back up please", "label": "BACK"}
+{"instruction": "can you play some music please", "label": "UNKNOWN"}
+{"instruction": "can you reverse course immediately", "label": "BACK"}
+{"instruction": "right, wait there immediately", "label": "STOP"}
+{"instruction": "veer left immediately", "label": "LEFT"}
+{"instruction": "can you stop moving immediately", "label": "STOP"}
+{"instruction": "quickly sing something immediately", "label": "UNKNOWN"}
+{"instruction": "pause.", "label": "STOP"}
+{"instruction": "can you open the pod bay doors right away", "label": "UNKNOWN"}
+{"instruction": "quickly take a right!", "label": "RIGHT"}
+{"instruction": "can you play some music immediately", "label": "UNKNOWN"}
+{"instruction": "please right turn!", "label": "RIGHT"}
+{"instruction": "spin right.", "label": "RIGHT"}
+{"instruction": "okay hold position please", "label": "STOP"}
+{"instruction": "spin left!", "label": "LEFT"}
+{"instruction": "right, carry on ahead now", "label": "FORWARD"}
+{"instruction": "can you sing something right away", "label": "UNKNOWN"}
+{"instruction": "can you check the space now", "label": "SEARCH"}
+{"instruction": "robot, solve this equation", "label": "UNKNOWN"}
+{"instruction": "quickly report immediately", "label": "REPORT"}
+{"instruction": "please do a backflip please", "label": "UNKNOWN"}
+{"instruction": "okay hard left", "label": "LEFT"}
+{"instruction": "open the pod bay doors now", "label": "UNKNOWN"}
+{"instruction": "robot, spin right immediately", "label": "RIGHT"}
+{"instruction": "please reverse course!", "label": "BACK"}
+{"instruction": "please translate this immediately", "label": "UNKNOWN"}
+{"instruction": "please rotate right!", "label": "RIGHT"}
+{"instruction": "robot, move forwards now", "label": "FORWARD"}
+{"instruction": "now bear right!", "label": "RIGHT"}
+{"instruction": "robot, straight ahead immediately", "label": "FORWARD"}
+{"instruction": "can you report", "label": "REPORT"}
+{"instruction": "please search ahead right away", "label": "SEARCH"}
+{"instruction": "quickly search the room now", "label": "SEARCH"}
+{"instruction": "please set an alarm now", "label": "UNKNOWN"}
+{"instruction": "quickly tell me a joke right away", "label": "UNKNOWN"}
+{"instruction": "now look around please", "label": "SEARCH"}
+{"instruction": "okay scan the area!", "label": "SEARCH"}
+{"instruction": "now turn right!", "label": "RIGHT"}
+{"instruction": "okay right turn immediately", "label": "RIGHT"}
+{"instruction": "go on ahead.", "label": "FORWARD"}
+{"instruction": "robot, drive on right away", "label": "FORWARD"}
+{"instruction": "quickly what do you see immediately", "label": "REPORT"}
+{"instruction": "can you pull out!", "label": "BACK"}
+{"instruction": "right, take us forward now", "label": "FORWARD"}
+{"instruction": "right, open the pod bay doors now", "label": "UNKNOWN"}
+{"instruction": "robot, what's there right away", "label": "REPORT"}
+{"instruction": "take a left!", "label": "LEFT"}
+{"instruction": "right, status right away", "label": "REPORT"}
+{"instruction": "can you tell me a joke", "label": "UNKNOWN"}
+{"instruction": "please play some music right away", "label": "UNKNOWN"}
+{"instruction": "now pause.", "label": "STOP"}
+{"instruction": "quickly roll forward please", "label": "FORWARD"}
+{"instruction": "okay stop moving!", "label": "STOP"}
+{"instruction": "can you do a backflip!", "label": "UNKNOWN"}
+{"instruction": "can you reverse right away", "label": "BACK"}
+{"instruction": "now hard right right away", "label": "RIGHT"}
+{"instruction": "robot, reverse course.", "label": "BACK"}
+{"instruction": "please head right", "label": "RIGHT"}
+{"instruction": "now take us forward", "label": "FORWARD"}
+{"instruction": "robot, pull out right away", "label": "BACK"}
+{"instruction": "please move ahead", "label": "FORWARD"}
+{"instruction": "please wait there!", "label": "STOP"}
+{"instruction": "please tell me a joke immediately", "label": "UNKNOWN"}
+{"instruction": "now veer left right away", "label": "LEFT"}
+{"instruction": "please sweep for casualties immediately", "label": "SEARCH"}
+{"instruction": "now stay put now", "label": "STOP"}
+{"instruction": "okay stand by immediately", "label": "STOP"}
+{"instruction": "can you call my mother!", "label": "UNKNOWN"}
+{"instruction": "now search ahead right away", "label": "SEARCH"}
+{"instruction": "okay move out", "label": "FORWARD"}
+{"instruction": "right, check the space", "label": "SEARCH"}
+{"instruction": "robot, open the pod bay doors!", "label": "UNKNOWN"}
+{"instruction": "left turn right away", "label": "LEFT"}
+{"instruction": "can you go right", "label": "RIGHT"}
+{"instruction": "quickly left turn!", "label": "LEFT"}
+{"instruction": "roll forward please", "label": "FORWARD"}
+{"instruction": "right, hard left!", "label": "LEFT"}
+{"instruction": "play some music", "label": "UNKNOWN"}
+{"instruction": "robot, fall back immediately", "label": "BACK"}
+{"instruction": "robot, open the pod bay doors please", "label": "UNKNOWN"}
+{"instruction": "please do a backflip!", "label": "UNKNOWN"}
+{"instruction": "okay head right.", "label": "RIGHT"}
+{"instruction": "quickly what time is it.", "label": "UNKNOWN"}
+{"instruction": "look for a person.", "label": "SEARCH"}
+{"instruction": "reverse please please", "label": "BACK"}
+{"instruction": "now forward march.", "label": "FORWARD"}
+{"instruction": "what's 17 plus 25 please", "label": "UNKNOWN"}
+{"instruction": "quickly retreat right away", "label": "BACK"}
+{"instruction": "robot, what's 17 plus 25", "label": "UNKNOWN"}
+{"instruction": "tell me what you found immediately", "label": "REPORT"}
+{"instruction": "can you sing something now", "label": "UNKNOWN"}
+{"instruction": "right, tell me a joke please", "label": "UNKNOWN"}
+{"instruction": "okay what do you see!", "label": "REPORT"}
+{"instruction": "check the space right away", "label": "SEARCH"}
+{"instruction": "right, left turn immediately", "label": "LEFT"}
+{"instruction": "okay move ahead immediately", "label": "FORWARD"}
+{"instruction": "now all stop now", "label": "STOP"}
+{"instruction": "robot, cease right away", "label": "STOP"}
+{"instruction": "please get moving forward please", "label": "FORWARD"}
+{"instruction": "can you describe the scene immediately", "label": "REPORT"}
+{"instruction": "now return right away", "label": "BACK"}
+{"instruction": "okay pause", "label": "STOP"}
+{"instruction": "can you forward march.", "label": "FORWARD"}
+{"instruction": "right, pull out.", "label": "BACK"}
+{"instruction": "right, advance immediately", "label": "FORWARD"}
+{"instruction": "reverse course right away", "label": "BACK"}
+{"instruction": "can you keep going please", "label": "FORWARD"}
+{"instruction": "quickly check the space now", "label": "SEARCH"}
+{"instruction": "head on immediately", "label": "FORWARD"}
+{"instruction": "now veer left!", "label": "LEFT"}
+{"instruction": "can you give me an update please", "label": "REPORT"}
+{"instruction": "robot, take a right immediately", "label": "RIGHT"}
+{"instruction": "okay head on immediately", "label": "FORWARD"}
+{"instruction": "search the room please", "label": "SEARCH"}
+{"instruction": "stay put please", "label": "STOP"}
+{"instruction": "robot, search ahead please", "label": "SEARCH"}
+{"instruction": "swing left please", "label": "LEFT"}
+{"instruction": "right, rotate right please", "label": "RIGHT"}
+{"instruction": "check the space now", "label": "SEARCH"}
+{"instruction": "robot, what time is it please", "label": "UNKNOWN"}
+{"instruction": "right, brake", "label": "STOP"}
+{"instruction": "right, spin left now", "label": "LEFT"}
+{"instruction": "right, pull out please", "label": "BACK"}
+{"instruction": "please return right away", "label": "BACK"}
+{"instruction": "quickly sweep for casualties.", "label": "SEARCH"}
+{"instruction": "quickly open the pod bay doors right away", "label": "UNKNOWN"}
+{"instruction": "right, back away", "label": "BACK"}
+{"instruction": "ahead please now", "label": "FORWARD"}
+{"instruction": "now go on ahead!", "label": "FORWARD"}
+{"instruction": "now call my mother right away", "label": "UNKNOWN"}
+{"instruction": "can you take a left now", "label": "LEFT"}
+{"instruction": "hold position please", "label": "STOP"}
+{"instruction": "please head right right away", "label": "RIGHT"}
+{"instruction": "quickly report!", "label": "REPORT"}
+{"instruction": "right, take a right", "label": "RIGHT"}
+{"instruction": "right, open the pod bay doors", "label": "UNKNOWN"}
+{"instruction": "now make your way forward", "label": "FORWARD"}
+{"instruction": "please what time is it", "label": "UNKNOWN"}
+{"instruction": "please hold!", "label": "STOP"}
+{"instruction": "move back!", "label": "BACK"}
+{"instruction": "okay spin right!", "label": "RIGHT"}
+{"instruction": "right, status please", "label": "REPORT"}
+{"instruction": "robot, what's 17 plus 25!", "label": "UNKNOWN"}
+{"instruction": "okay spin left", "label": "LEFT"}
+{"instruction": "right, swing right.", "label": "RIGHT"}
+{"instruction": "please solve this equation.", "label": "UNKNOWN"}
+{"instruction": "quickly open the pod bay doors now", "label": "UNKNOWN"}
+{"instruction": "please who are you please", "label": "UNKNOWN"}
+{"instruction": "can you swing right.", "label": "RIGHT"}
+{"instruction": "quickly bear left.", "label": "LEFT"}
+{"instruction": "now swing right.", "label": "RIGHT"}
+{"instruction": "right, come back please", "label": "BACK"}
+{"instruction": "please rotate right now", "label": "RIGHT"}
+{"instruction": "please reverse please immediately", "label": "BACK"}
+{"instruction": "please sing something now", "label": "UNKNOWN"}
+{"instruction": "right, rotate left!", "label": "LEFT"}
+{"instruction": "robot, sweep for casualties.", "label": "SEARCH"}
+{"instruction": "please who are you now", "label": "UNKNOWN"}
+{"instruction": "right, report right away", "label": "REPORT"}
+{"instruction": "robot, search the room please", "label": "SEARCH"}
+{"instruction": "okay carry on ahead.", "label": "FORWARD"}
+{"instruction": "please onward right away", "label": "FORWARD"}
+{"instruction": "quickly what's 17 plus 25!", "label": "UNKNOWN"}
+{"instruction": "okay cease right away", "label": "STOP"}
+{"instruction": "find anyone down please", "label": "SEARCH"}
+{"instruction": "please retreat immediately", "label": "BACK"}
+{"instruction": "quickly status", "label": "REPORT"}
+{"instruction": "quickly make your way forward!", "label": "FORWARD"}
+{"instruction": "quickly rotate left immediately", "label": "LEFT"}
+{"instruction": "please keep going", "label": "FORWARD"}
+{"instruction": "please brake please", "label": "STOP"}
+{"instruction": "can you report now", "label": "REPORT"}
+{"instruction": "check the space immediately", "label": "SEARCH"}
+{"instruction": "quickly give me an update now", "label": "REPORT"}
+{"instruction": "okay look for a person!", "label": "SEARCH"}
+{"instruction": "now let's move ahead.", "label": "FORWARD"}
+{"instruction": "right, take a left immediately", "label": "LEFT"}
+{"instruction": "do a backflip right away", "label": "UNKNOWN"}
+{"instruction": "please move up right away", "label": "FORWARD"}
+{"instruction": "now left turn right away", "label": "LEFT"}
+{"instruction": "please what's there!", "label": "REPORT"}
+{"instruction": "quickly pull back.", "label": "BACK"}
+{"instruction": "set an alarm right away", "label": "UNKNOWN"}
+{"instruction": "quickly hold.", "label": "STOP"}
+{"instruction": "now report!", "label": "REPORT"}
+{"instruction": "now bear right.", "label": "RIGHT"}
+{"instruction": "robot, hold please", "label": "STOP"}
+{"instruction": "okay reverse please now", "label": "BACK"}
+{"instruction": "can you give me an update now", "label": "REPORT"}
+{"instruction": "quickly go backwards.", "label": "BACK"}
+{"instruction": "okay reverse course now", "label": "BACK"}
+{"instruction": "robot, open the pod bay doors immediately", "label": "UNKNOWN"}
+{"instruction": "quickly translate this", "label": "UNKNOWN"}
+{"instruction": "can you status right away", "label": "REPORT"}
+{"instruction": "please move forwards", "label": "FORWARD"}
+{"instruction": "right, give me an update", "label": "REPORT"}
+{"instruction": "please swing right!", "label": "RIGHT"}
+{"instruction": "fall back right away", "label": "BACK"}
+{"instruction": "okay play some music right away", "label": "UNKNOWN"}
+{"instruction": "quickly stay put right away", "label": "STOP"}
+{"instruction": "robot, veer left right away", "label": "LEFT"}
+{"instruction": "can you report.", "label": "REPORT"}
+{"instruction": "right, ahead please.", "label": "FORWARD"}
+{"instruction": "quickly veer right right away", "label": "RIGHT"}
+{"instruction": "right turn please", "label": "RIGHT"}
+{"instruction": "please bear right right away", "label": "RIGHT"}
+{"instruction": "quickly report now", "label": "REPORT"}
+{"instruction": "now carry on ahead", "label": "FORWARD"}
+{"instruction": "can you go left!", "label": "LEFT"}
+{"instruction": "quickly play some music!", "label": "UNKNOWN"}
+{"instruction": "okay tell me what you found now", "label": "REPORT"}
+{"instruction": "right, go left!", "label": "LEFT"}
+{"instruction": "now turn right immediately", "label": "RIGHT"}
+{"instruction": "okay veer left!", "label": "LEFT"}
+{"instruction": "quickly swing left right away", "label": "LEFT"}
+{"instruction": "quickly push ahead.", "label": "FORWARD"}
+{"instruction": "translate this now", "label": "UNKNOWN"}
+{"instruction": "please read me the news.", "label": "UNKNOWN"}
+{"instruction": "quickly turn right.", "label": "RIGHT"}
+{"instruction": "robot, halt now", "label": "STOP"}
+{"instruction": "can you hard right immediately", "label": "RIGHT"}
+{"instruction": "stand by!", "label": "STOP"}
+{"instruction": "forward march right away", "label": "FORWARD"}
+{"instruction": "set an alarm!", "label": "UNKNOWN"}
+{"instruction": "please come back", "label": "BACK"}
+{"instruction": "robot, take a left immediately", "label": "LEFT"}
+{"instruction": "now what time is it!", "label": "UNKNOWN"}
+{"instruction": "now head straight on please", "label": "FORWARD"}
+{"instruction": "can you return please", "label": "BACK"}
+{"instruction": "please take a left now", "label": "LEFT"}
+{"instruction": "robot, sing something right away", "label": "UNKNOWN"}
+{"instruction": "robot, turn left!", "label": "LEFT"}
+{"instruction": "robot, move out now", "label": "FORWARD"}
+{"instruction": "quickly go left.", "label": "LEFT"}
+{"instruction": "now wait there please", "label": "STOP"}
+{"instruction": "please pull back right away", "label": "BACK"}
+{"instruction": "okay back off please", "label": "BACK"}
+{"instruction": "okay translate this!", "label": "UNKNOWN"}
+{"instruction": "okay give me an update!", "label": "REPORT"}
+{"instruction": "okay who are you now", "label": "UNKNOWN"}
+{"instruction": "okay bear left.", "label": "LEFT"}
+{"instruction": "can you rotate left immediately", "label": "LEFT"}
+{"instruction": "right, reverse please right away", "label": "BACK"}
+{"instruction": "robot, what do you see", "label": "REPORT"}
+{"instruction": "can you stop right away", "label": "STOP"}
+{"instruction": "quickly tell me a joke", "label": "UNKNOWN"}
+{"instruction": "quickly ahead please please", "label": "FORWARD"}
+{"instruction": "quickly how old are you", "label": "UNKNOWN"}
+{"instruction": "robot, swing right now", "label": "RIGHT"}
+{"instruction": "okay take a right", "label": "RIGHT"}
+{"instruction": "please advance now", "label": "FORWARD"}
+{"instruction": "robot, pause please", "label": "STOP"}
+{"instruction": "can you retreat right away", "label": "BACK"}
+{"instruction": "robot, take a left now", "label": "LEFT"}
+{"instruction": "robot, tell me a joke right away", "label": "UNKNOWN"}
+{"instruction": "can you veer right", "label": "RIGHT"}
+{"instruction": "now tell me what you found right away", "label": "REPORT"}
+{"instruction": "right, who are you immediately", "label": "UNKNOWN"}
+{"instruction": "can you what do you see please", "label": "REPORT"}
+{"instruction": "right, who are you now", "label": "UNKNOWN"}
+{"instruction": "robot, take us forward right away", "label": "FORWARD"}
+{"instruction": "can you onward.", "label": "FORWARD"}
+{"instruction": "okay order a pizza immediately", "label": "UNKNOWN"}
+{"instruction": "robot, search ahead now", "label": "SEARCH"}
+{"instruction": "quickly veer left please", "label": "LEFT"}
+{"instruction": "quickly head on now", "label": "FORWARD"}
+{"instruction": "okay what time is it!", "label": "UNKNOWN"}
+{"instruction": "okay report!", "label": "REPORT"}
+{"instruction": "can you head on please", "label": "FORWARD"}
+{"instruction": "hold now", "label": "STOP"}
+{"instruction": "okay make coffee immediately", "label": "UNKNOWN"}
+{"instruction": "robot, tell me a joke", "label": "UNKNOWN"}
+{"instruction": "right, play some music right away", "label": "UNKNOWN"}
+{"instruction": "right, keep going immediately", "label": "FORWARD"}
+{"instruction": "okay head on", "label": "FORWARD"}
+{"instruction": "quickly brake!", "label": "STOP"}
+{"instruction": "what's your favourite colour right away", "label": "UNKNOWN"}
+{"instruction": "right, status now", "label": "REPORT"}
+{"instruction": "robot, scan the area now", "label": "SEARCH"}
+{"instruction": "robot, report please", "label": "REPORT"}
+{"instruction": "robot, bear left please", "label": "LEFT"}
+{"instruction": "robot, make coffee.", "label": "UNKNOWN"}
+{"instruction": "please stand by!", "label": "STOP"}
+{"instruction": "now ahead please please", "label": "FORWARD"}
+{"instruction": "quickly what's your favourite colour now", "label": "UNKNOWN"}
+{"instruction": "okay describe the scene.", "label": "REPORT"}
+{"instruction": "now pause now", "label": "STOP"}
+{"instruction": "okay hold position right away", "label": "STOP"}
+{"instruction": "okay press on right away", "label": "FORWARD"}
+{"instruction": "okay search ahead", "label": "SEARCH"}
+{"instruction": "can you stop moving now", "label": "STOP"}
+{"instruction": "please who are you right away", "label": "UNKNOWN"}
+{"instruction": "can you move forwards", "label": "FORWARD"}
+{"instruction": "robot, describe the scene!", "label": "REPORT"}
+{"instruction": "now straight ahead.", "label": "FORWARD"}
+{"instruction": "robot, what do you see now", "label": "REPORT"}
+{"instruction": "quickly left turn right away", "label": "LEFT"}
+{"instruction": "can you take a left.", "label": "LEFT"}
+{"instruction": "move back now", "label": "BACK"}
+{"instruction": "please take a right right away", "label": "RIGHT"}
+{"instruction": "can you search ahead!", "label": "SEARCH"}
+{"instruction": "robot, look around", "label": "SEARCH"}
+{"instruction": "okay return", "label": "BACK"}
+{"instruction": "okay go left right away", "label": "LEFT"}
+{"instruction": "now retreat", "label": "BACK"}
+{"instruction": "now rotate left.", "label": "LEFT"}
+{"instruction": "robot, check the space right away", "label": "SEARCH"}
+{"instruction": "robot, how old are you please", "label": "UNKNOWN"}
+{"instruction": "hold!", "label": "STOP"}
+{"instruction": "now open the pod bay doors right away", "label": "UNKNOWN"}
+{"instruction": "give me an update!", "label": "REPORT"}
+{"instruction": "quickly report", "label": "REPORT"}
+{"instruction": "now set an alarm.", "label": "UNKNOWN"}
+{"instruction": "can you solve this equation immediately", "label": "UNKNOWN"}
+{"instruction": "all stop", "label": "STOP"}
+{"instruction": "can you hard left immediately", "label": "LEFT"}
+{"instruction": "now swing left please", "label": "LEFT"}
+{"instruction": "right, halt!", "label": "STOP"}
+{"instruction": "now sweep for casualties.", "label": "SEARCH"}
+{"instruction": "call my mother now", "label": "UNKNOWN"}
+{"instruction": "now rotate right", "label": "RIGHT"}
+{"instruction": "okay veer right!", "label": "RIGHT"}
+{"instruction": "robot, tell me what you found immediately", "label": "REPORT"}
+{"instruction": "quickly search ahead.", "label": "SEARCH"}
+{"instruction": "okay sweep for casualties!", "label": "SEARCH"}
+{"instruction": "quickly press on!", "label": "FORWARD"}
+{"instruction": "quickly call my mother now", "label": "UNKNOWN"}
+{"instruction": "quickly book a flight now", "label": "UNKNOWN"}
+{"instruction": "okay rotate left!", "label": "LEFT"}
+{"instruction": "please what do you see now", "label": "REPORT"}
+{"instruction": "okay swing left now", "label": "LEFT"}
+{"instruction": "can you wait there!", "label": "STOP"}
+{"instruction": "robot, sing something.", "label": "UNKNOWN"}
+{"instruction": "can you spin right please", "label": "RIGHT"}
+{"instruction": "robot, how old are you", "label": "UNKNOWN"}
+{"instruction": "what's there please", "label": "REPORT"}
+{"instruction": "quickly hard left", "label": "LEFT"}
+{"instruction": "okay hard left!", "label": "LEFT"}
+{"instruction": "straight ahead immediately", "label": "FORWARD"}
+{"instruction": "okay head left now", "label": "LEFT"}
+{"instruction": "okay move back immediately", "label": "BACK"}
+{"instruction": "quickly let's move ahead right away", "label": "FORWARD"}
+{"instruction": "robot, what time is it right away", "label": "UNKNOWN"}
+{"instruction": "right, back up", "label": "BACK"}
+{"instruction": "robot, call my mother immediately", "label": "UNKNOWN"}
+{"instruction": "quickly tell me a joke now", "label": "UNKNOWN"}
+{"instruction": "please roll forward now", "label": "FORWARD"}
+{"instruction": "okay what's there!", "label": "REPORT"}
+{"instruction": "right, tell me what you found", "label": "REPORT"}
+{"instruction": "robot, stand by!", "label": "STOP"}
+{"instruction": "please swing right please", "label": "RIGHT"}
+{"instruction": "move back immediately", "label": "BACK"}
+{"instruction": "okay onward right away", "label": "FORWARD"}
+{"instruction": "quickly keep going right away", "label": "FORWARD"}
+{"instruction": "robot, reverse please.", "label": "BACK"}
+{"instruction": "quickly read me the news.", "label": "UNKNOWN"}
+{"instruction": "please come back now", "label": "BACK"}
+{"instruction": "now go on ahead", "label": "FORWARD"}
+{"instruction": "right, fall back", "label": "BACK"}
+{"instruction": "robot, veer left", "label": "LEFT"}
+{"instruction": "quickly call my mother", "label": "UNKNOWN"}
+{"instruction": "okay look around immediately", "label": "SEARCH"}
+{"instruction": "now veer right immediately", "label": "RIGHT"}
+{"instruction": "can you sweep for casualties please", "label": "SEARCH"}
+{"instruction": "swing right right away", "label": "RIGHT"}
+{"instruction": "now head on immediately", "label": "FORWARD"}
+{"instruction": "please call my mother.", "label": "UNKNOWN"}
+{"instruction": "okay stop moving", "label": "STOP"}
+{"instruction": "okay reverse", "label": "BACK"}
+{"instruction": "right, move back right away", "label": "BACK"}
+{"instruction": "can you forward march right away", "label": "FORWARD"}
+{"instruction": "now stand by please", "label": "STOP"}
+{"instruction": "now cease.", "label": "STOP"}
+{"instruction": "okay describe the scene now", "label": "REPORT"}
+{"instruction": "now head right", "label": "RIGHT"}
+{"instruction": "please hold right away", "label": "STOP"}
+{"instruction": "please what do you see!", "label": "REPORT"}
+{"instruction": "quickly cease immediately", "label": "STOP"}
+{"instruction": "quickly bear left", "label": "LEFT"}
+{"instruction": "okay take us forward.", "label": "FORWARD"}
+{"instruction": "can you search ahead please", "label": "SEARCH"}
+{"instruction": "please status please", "label": "REPORT"}
+{"instruction": "please veer left right away", "label": "LEFT"}
+{"instruction": "quickly reverse now", "label": "BACK"}
+{"instruction": "can you retreat immediately", "label": "BACK"}
+{"instruction": "translate this!", "label": "UNKNOWN"}
+{"instruction": "set an alarm immediately", "label": "UNKNOWN"}
+{"instruction": "robot, spin left immediately", "label": "LEFT"}
+{"instruction": "robot, carry on ahead", "label": "FORWARD"}
+{"instruction": "please start moving forward.", "label": "FORWARD"}
+{"instruction": "okay pull out!", "label": "BACK"}
+{"instruction": "please give me an update", "label": "REPORT"}
+{"instruction": "go on ahead!", "label": "FORWARD"}
+{"instruction": "please call my mother immediately", "label": "UNKNOWN"}
+{"instruction": "robot, hard left right away", "label": "LEFT"}
+{"instruction": "right, what's 17 plus 25.", "label": "UNKNOWN"}
+{"instruction": "please call my mother right away", "label": "UNKNOWN"}
+{"instruction": "stand by please", "label": "STOP"}
+{"instruction": "now look around.", "label": "SEARCH"}
+{"instruction": "okay play some music immediately", "label": "UNKNOWN"}
+{"instruction": "now look for a person please", "label": "SEARCH"}
+{"instruction": "okay check the space please", "label": "SEARCH"}
+{"instruction": "please go left right away", "label": "LEFT"}
+{"instruction": "okay take us forward please", "label": "FORWARD"}
+{"instruction": "can you scan the area!", "label": "SEARCH"}
+{"instruction": "reverse immediately", "label": "BACK"}
+{"instruction": "head left!", "label": "LEFT"}
+{"instruction": "please take a left.", "label": "LEFT"}
+{"instruction": "let's move ahead right away", "label": "FORWARD"}
+{"instruction": "can you go on ahead immediately", "label": "FORWARD"}
+{"instruction": "now set an alarm", "label": "UNKNOWN"}
+{"instruction": "quickly right turn", "label": "RIGHT"}
+{"instruction": "read me the news please", "label": "UNKNOWN"}
+{"instruction": "can you retreat", "label": "BACK"}
+{"instruction": "advance right away", "label": "FORWARD"}
+{"instruction": "please start moving forward!", "label": "FORWARD"}
+{"instruction": "right, go left now", "label": "LEFT"}
+{"instruction": "quickly go straight immediately", "label": "FORWARD"}
+{"instruction": "please how old are you", "label": "UNKNOWN"}
+{"instruction": "hard right please", "label": "RIGHT"}
+{"instruction": "please rotate right", "label": "RIGHT"}
+{"instruction": "now hold!", "label": "STOP"}
+{"instruction": "please report!", "label": "REPORT"}
+{"instruction": "robot, order a pizza right away", "label": "UNKNOWN"}
+{"instruction": "can you who are you immediately", "label": "UNKNOWN"}
+{"instruction": "please do a backflip immediately", "label": "UNKNOWN"}
+{"instruction": "okay read me the news now", "label": "UNKNOWN"}
+{"instruction": "robot, book a flight now", "label": "UNKNOWN"}
+{"instruction": "robot, come back", "label": "BACK"}
+{"instruction": "robot, retreat", "label": "BACK"}
+{"instruction": "robot, move forwards immediately", "label": "FORWARD"}
+{"instruction": "can you bear left", "label": "LEFT"}
+{"instruction": "robot, translate this please", "label": "UNKNOWN"}
+{"instruction": "okay head straight on immediately", "label": "FORWARD"}
+{"instruction": "can you carry on ahead right away", "label": "FORWARD"}
+{"instruction": "can you translate this.", "label": "UNKNOWN"}
+{"instruction": "can you right turn", "label": "RIGHT"}
+{"instruction": "quickly head left.", "label": "LEFT"}
+{"instruction": "can you reverse please right away", "label": "BACK"}
+{"instruction": "okay hold position!", "label": "STOP"}
+{"instruction": "can you retreat please", "label": "BACK"}
+{"instruction": "okay reverse please please", "label": "BACK"}
+{"instruction": "robot, what time is it.", "label": "UNKNOWN"}
+{"instruction": "now move forwards now", "label": "FORWARD"}
+{"instruction": "pull back", "label": "BACK"}
+{"instruction": "right, go right please", "label": "RIGHT"}
+{"instruction": "please move ahead now", "label": "FORWARD"}
+{"instruction": "now veer right now", "label": "RIGHT"}
+{"instruction": "now start moving forward right away", "label": "FORWARD"}
+{"instruction": "now halt now", "label": "STOP"}
+{"instruction": "now move forwards.", "label": "FORWARD"}
+{"instruction": "please move ahead right away", "label": "FORWARD"}
+{"instruction": "robot, set an alarm right away", "label": "UNKNOWN"}
+{"instruction": "quickly stop moving immediately", "label": "STOP"}
+{"instruction": "robot, move out!", "label": "FORWARD"}
+{"instruction": "now open the pod bay doors please", "label": "UNKNOWN"}
+{"instruction": "please look around now", "label": "SEARCH"}
+{"instruction": "can you look for a person!", "label": "SEARCH"}
+{"instruction": "now take a left", "label": "LEFT"}
+{"instruction": "hard right now", "label": "RIGHT"}
+{"instruction": "robot, reverse please!", "label": "BACK"}
+{"instruction": "now order a pizza now", "label": "UNKNOWN"}
+{"instruction": "can you veer left now", "label": "LEFT"}
+{"instruction": "now reverse!", "label": "BACK"}
+{"instruction": "quickly how old are you now", "label": "UNKNOWN"}
+{"instruction": "quickly status!", "label": "REPORT"}
+{"instruction": "now sing something!", "label": "UNKNOWN"}
+{"instruction": "okay rotate right", "label": "RIGHT"}
+{"instruction": "can you advance!", "label": "FORWARD"}
+{"instruction": "robot, hard right!", "label": "RIGHT"}
+{"instruction": "okay what's the weather immediately", "label": "UNKNOWN"}
+{"instruction": "quickly push ahead", "label": "FORWARD"}
+{"instruction": "can you push ahead right away", "label": "FORWARD"}
+{"instruction": "can you spin right", "label": "RIGHT"}
+{"instruction": "what do you see.", "label": "REPORT"}
+{"instruction": "okay hard right", "label": "RIGHT"}
+{"instruction": "please go on ahead immediately", "label": "FORWARD"}
+{"instruction": "please search ahead now", "label": "SEARCH"}
+{"instruction": "can you spin right right away", "label": "RIGHT"}
+{"instruction": "please head on please", "label": "FORWARD"}
+{"instruction": "please fall back.", "label": "BACK"}
+{"instruction": "now stop moving please", "label": "STOP"}
+{"instruction": "okay left turn right away", "label": "LEFT"}
+{"instruction": "pause please", "label": "STOP"}
+{"instruction": "okay set an alarm now", "label": "UNKNOWN"}
+{"instruction": "please tell me a joke.", "label": "UNKNOWN"}
+{"instruction": "take us forward immediately", "label": "FORWARD"}
+{"instruction": "robot, move ahead now", "label": "FORWARD"}
+{"instruction": "okay find anyone down please", "label": "SEARCH"}
+{"instruction": "please bear left now", "label": "LEFT"}
+{"instruction": "do a backflip immediately", "label": "UNKNOWN"}
+{"instruction": "okay press on.", "label": "FORWARD"}
+{"instruction": "now recite a poem", "label": "UNKNOWN"}
+{"instruction": "can you come back immediately", "label": "BACK"}
+{"instruction": "okay sing something right away", "label": "UNKNOWN"}
+{"instruction": "quickly who are you!", "label": "UNKNOWN"}
+{"instruction": "right, swing left right away", "label": "LEFT"}
+{"instruction": "now stop moving!", "label": "STOP"}
+{"instruction": "okay spin left please", "label": "LEFT"}
+{"instruction": "right, take us forward please", "label": "FORWARD"}
+{"instruction": "quickly come back", "label": "BACK"}
