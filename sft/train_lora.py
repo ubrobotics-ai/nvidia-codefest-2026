@@ -85,8 +85,13 @@ def main():
     except Exception:
         pass
     from peft import LoraConfig, get_peft_model
-    # language tower only: the vision path is not being trained and must not drift.
-    targets = ["q_proj","k_proj","v_proj","o_proj","fc1","fc2"]
+    # Anchored to the language model on purpose. A bare suffix list ("q_proj", "fc1", ...)
+    # also matches model.visual.encoder.layers.*, and the first run adapted 135 vision-tower
+    # modules as well as the 168 language ones. That run was harmless only by accident --
+    # the data is text-only, so the tower never executed and its lora_B stayed exactly zero
+    # -- but with any image in the data it would have quietly retrained the perception stack
+    # that L0 and L1 measure.
+    targets = r"model\.language_model\.layers\.\d+\.(self_attn\.[qkvo]_proj|mlp\.fc[12])$"
     cfg = LoraConfig(r=a.rank, lora_alpha=2*a.rank, lora_dropout=0.05, bias="none",
                      task_type="CAUSAL_LM", target_modules=targets)
     model = get_peft_model(model, cfg)
