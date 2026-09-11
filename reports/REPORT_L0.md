@@ -7,8 +7,11 @@ indices**, not option letters). Greedy decode, `enable_thinking=False` unless a 
 ## Decision
 
 - **INT4-AWQ ships.** It is the deployed quantisation; nothing here argues against it.
-- **Distance k is fitted per engine build, provisionally 1.21.** Not a model constant.
-- **Thinking on for grounding, off for closed spatial queries.** Per-request flag; no global choice.
+- **Distance k is fitted per engine build *and per range bucket*, provisionally 1.21.** Not a model
+  constant, and not one number: the far bucket needs 1.34 where the global fit gives 1.21.
+- **Thinking on for grounding *and operator commands*, off for closed spatial queries.** L1 measured
+  commands at 14/15 with thinking on against 3/14 with it off, so the command path needs it too now
+  that Cosmos owns that path. Per-request flag; no global choice.
 - **No Orin accuracy claim until the engine-equivalence gate has run.** These rows are SM103.
 
 ## The finding
@@ -17,7 +20,8 @@ indices**, not option letters). Greedy decode, `enable_thinking=False` unless a 
 restores it.** On the deployed TensorRT INT4-AWQ engine, distance reads 29.63% at bf16 against
 18.52% at INT4 — a 11.1-point loss, paired McNemar b=73 c=19, p < 0.0001. Re-fit the
 distance constant per arm and that loss disappears entirely: **b = 68, c = 66, p = 0.931**
-(discordant pairs, not accuracies; held out, bf16 174 vs TensorRT 167 of 449). left_right
+(**in-sample** discordant pairs, not accuracies; the same in-sample scoring puts bf16 at 178 and the
+TensorRT arm at 176 of 486. Held out and split-half, the k table below reads 174 against 167). left_right
 (p = 0.724) and mcq (p = 0.451) never moved.
 
 **NF4 does not shift the scale; AWQ does.** NF4 fits k = 1.1628 against bf16's 1.1546 and needs no
@@ -31,9 +35,10 @@ schemes are indistinguishable only *after* each is re-fitted (p = 0.804); raw th
 is a property of the quantised artefact (bf16 1.1546, NF4 1.1628, AWQ 1.2148), so it is fitted per
 artefact, **including per engine build**. The deployed constant is the one fitted on the Orin engine's
 own distance outputs, from the engine-equivalence gate run below; bake that, not this. Measured on
-these items (in-sample, own k, over the 449 usable): the INT4 answers score
-36.01% (175/449) under their own constant and 33.13%
-(161/449) under the bf16 one —
+these items (**in-sample**, each arm's own k, scored over all 486 by the same rule the McNemar rows
+use): the INT4 answers score
+36.21% (176/486) under their own constant and 33.33%
+(162/486) under the bf16 one —
 **2.88 points (14 items) thrown away for no reason.**
 
 That figure is smaller than the 11.1-point raw gap above, and the difference matters: almost
@@ -41,51 +46,31 @@ all of the raw gap is removed by calibrating *at all* (18.31% uncalibrated to 36
 only the 2.88-point remainder is the cost of using the *wrong* constant. Do not quote
 the raw gap as the cost of mis-calibration.
 
-**The Friday SFT decision.** Not output format, and not precision. Two candidates beat both.
+**The Friday SFT decision: L0 contributes no SFT target.** That is the finding, not a gap in it.
 
-*The left prior — measured, and it is not the cheap win an earlier draft of this report claimed.*
-left_right is balanced 250/250 and the model answers "left" 72.4% of the time: **87.2% correct when
-the answer is left, 42.4% when it is right**, below chance on half the set, and it survives
-quantisation nearly unchanged. The obvious fix is order-debiasing — ask the mirrored question about
-the same image and average — so it was run on all 500 items against the TensorRT engine:
+This report rules two candidates out and downgrades a third:
 
-| | n = 500 |
-|---|---|
-| same answer to the mirrored question (**the prior**) | 328/500 = **65.6%** |
-| answer flipped, as geometry requires | 172/500 = 34.4% |
-| accuracy, as run | 320/500 = 64.00% |
-| accuracy, order-debiased | 254/500 = 50.80% (**-13.20**) |
-| accuracy on the order-consistent subset | 121/172 = **70.35%** |
+- **Precision is not the problem.** 4-bit costs nothing once the arm is calibrated (p = 0.931), so
+  there is nothing for training to repair there.
+- **Format is not the target.** The tolerant parser recovers the boxes (precision 0.529, recall 0.750)
+  without valid JSON ever being emitted, and L1's six contract rewrites each scored 0/12 detections
+  while improving format. Under the one-model architecture nothing asks the model for a contract.
+- **The left prior is a confidence signal, not a training target.** The order-swap probe above shows
+  65.6% order-invariance: on two thirds of items the model returns the same word for a question and
+  its mirror. That is the absence of a spatial comparison, and a few hundred supervised examples do
+  not create one. Order-consistency is worth having as a *signal* (70.35% vs 60.7%); the 72/28 answer
+  split is not worth training against.
 
-**Order-debiasing makes it worse, and cannot help.** On two thirds of items the model returns the same
-word for a question and its mirror, so there is no latent spatial judgement on those items to recover;
-averaging can at best keep the 121 it gets right when consistent and guess the rest, a ceiling near 57%
-— below the 64% it already scores. The prior is not a mis-set threshold on a working comparison. It is
-the absence of the comparison on most items, partly masked by a bias that happens to pay.
+So the SFT budget belongs with **L1's candidates**, all on the language side: the **tool-calling
+re-run** (0/21, but August, a different serving stack, a bare schema, and unmeasured under the prompt
+that moved commands from 3/14 to 14/15), the missing **UNKNOWN path** (`"Sing me a song"` returns
+`BACK` rather than declining), and **PT-PT** if it returns to scope. L1 has a measured fallback for
+the last two — a text-only Gemma E2B at 14/14 including Portuguese, 2,591 MB — so training is not the
+only route to any of them.
 
-What survives: the model is meaningfully better when it *is* order-consistent (70.35% against 60.7% on
-the rest), so order-consistency is a usable **confidence signal** at 2x inference cost — worth having
-on a rover that can decline to answer. And a logit-bias fix cannot be evaluated from these outputs at
-all, because the harness saves decoded text, not scores. Any SFT case here has to be argued on the
-65.6% order-invariance, not on the 72/28 answer split.
-
-*Open-vocabulary precision.* L1 measures 0.529 precision on the case where Cosmos is the only proposer
-and nothing adjudicates. That is a perception problem, and it is the one that decides whether a box
-means "go and look" or "found".
-
-**Why not output format.** An earlier draft of this report recommended it. That predates two things:
-the tolerant parser, which recovers the boxes (precision 0.529, recall 0.750) without the model ever
-emitting valid JSON, and L1's 2026-09-11 decision that Cosmos3-Edge takes **both** jobs, perception and
-the operator interface, with geometry deterministic in code. Under that architecture nothing asks the
-model for a contract. L1 also tried six contract rewrites — flat fixed-arity, single slot, line-per-
-entity, worked example, ROS 2 `Detection2DArray` — and **every one scored 0/12 detections** while
-improving format. Training the model toward a format it is not asked to produce would buy the thing
-that already works and cost the thing that does not.
-
-L1's own SFT candidates are **tool-calling** (0/21, but measured in August on a different serving stack
-with a bare schema, and unmeasured under the prompt that moved commands from 3/14 to 14/15) and the
-missing **UNKNOWN** path — `"Sing me a song"` returns `BACK` rather than a refusal. The left prior above
-is a third, and the only one this report contributes.
+**Open-vocabulary precision (0.529) stays on the engineering side, not the training side.** It is the
+perception limit to design around — gate approaches on a second confirmation, and treat a box as "go
+and look" rather than "found" — not something to fine-tune away on 24 items.
 
 ### Provenance of the TensorRT row — read before quoting it
 
@@ -160,7 +145,11 @@ dequantises on every matmul — it says nothing about what an INT4 engine would 
 
 **The round-1 43.94 tok/s figure is withdrawn.** The same model at the same precision on the same B300
 measured 76.17 tok/s one row below, in a different container — 1.7x apart from Python-side overhead alone.
-Neither is a deployment number; the Orin figures (52.8 tok/s decode at 3,377 MB) are the ones that count.
+Neither is a deployment number. The Orin figures are the ones that count: **52.8 tok/s decode**, and for
+memory quote L1's **~4,830 MB system-wide peak for the full VLM**, not the 3,377 MB process-resident
+figure for the LLM arm alone — 3,377 + 942 (visual engine) + 512 (embedding) = 4,831, which is why the
+two numbers appear for one board. A reader who meets 3,377 here and 4,830 in L1 will stop at the
+discrepancy, so state the scope wherever either is quoted.
 
 Blank cells are honest blanks: the TensorRT arm is driven by `llm_inference` as a subprocess and the
 harness records wall-clock, not generated-token counts, and the llama.cpp arm reports no peak-memory
@@ -242,9 +231,9 @@ quantisation delta on those two tasks is uninformative — a flat Gemma left_rig
 that quantisation is free. The only meaningful Gemma delta is **distance** (16.26% bf16),
 which is the one task where it demonstrably has something to lose.
 
-Cosmos3-Edge clears chance on both: left_right 65.20% vs 50.0%, mcq
-17.54% vs 14.22% — though the mcq margin is only
-+3.32 points, so read that column with its N (456) in mind. All three
+Cosmos3-Edge clears chance on both: left_right 64.80% vs 50.0%, mcq
+17.76% vs 14.22% — though the mcq margin is only
++3.54 points, so read that column with its N (456) in mind. All three
 tasks are informative for Cosmos3-Edge.
 
 ## Distance calibration constant k, re-fitted per arm
@@ -277,13 +266,45 @@ where both ground truth and prediction parse as positive numbers — it needs a 
 drops 37-38 per arm. The dataset's own scorer still scores those items, and one or two of them happen to
 land inside the +/-10% band anyway. Quote 486-based figures or 449-based ones, never both in a sentence.
 
+### The left_right prior is not a re-thresholding target
+
+left_right is balanced 250/250 and the model answers `left` 72.4% of the time: **87.2% correct when the
+answer is left, 42.4% when it is right** — below chance on half the set, and nearly unchanged by
+quantisation. The obvious fix is order-debiasing: the question asks whether A is right of B, so asking the
+mirror about the same image must invert the answer. Run over all 500 items on the TensorRT engine:
+
+| | n = 500 |
+|---|---|
+| same answer to the mirrored question (**the prior**) | 328/500 = **65.6%** |
+| answer flipped, as geometry requires | 172/500 = 34.4% |
+| accuracy, as run | 320/500 = 64.00% |
+| accuracy, order-debiased | 254/500 = 50.80% (**-13.20**) |
+| accuracy on the order-consistent subset | 121/172 = **70.35%** |
+
+**Tie rule, without which the debiased figure is not derivable:** where the pair flips, keep the original
+answer; where it does not, the prior is showing, so take the answer the model is biased *against* (`right`).
+Any tie rule loses on those 328 items — keeping the biased answer merely reproduces the 64% baseline — and
+that is the point: the pair carries no information there.
+
+**So order-debiasing cannot help.** Its ceiling is the 121 it gets right when consistent plus a guess on
+the rest, near 57%, below the 64% already scored. The 72/28 split is not a mis-set threshold on a working
+comparison; it is the absence of the comparison on two thirds of items, partly masked by a bias that pays.
+What survives is a **confidence signal** — 70.35% when order-consistent against 60.7% when not — at 2x
+inference cost, which is worth having on a rover that can decline. A logit-bias variant cannot be judged
+from these outputs at all: the harness saves decoded text, not scores. Reproduce with
+`scripts/l0_swap_probe.py`.
+
 ### Is one constant really one constant?
 
 Not quite, and it matters most where the rover cares most. Median `gt/pred` by ground-truth range:
 
-| arm | [0,4) m | [4,8) | [8,12) | [12,+) | global | spread |
+| arm | [0,4) m | [4,8) | [8,12) | [12,+) | full-set median | spread |
 |---|---|---|---|---|---|---|
 | bf16 | 1.1028 | 1.2203 | 1.1228 | 1.1465 | 1.1492 | 0.118 |
+
+(The last column is the **full-set median** of `gt/pred`, not the split-half mean `k` in the table below —
+1.1492 here against 1.1546 there for bf16. Same estimator, different sample.)
+
 | **INT4 AWQ (TensorRT)** | 1.1277 | 1.2486 | 1.1516 | **1.3350** | 1.2083 | **0.207** |
 | NF4 | 1.0837 | 1.2317 | 1.1513 | 1.1441 | 1.1574 | 0.148 |
 
@@ -334,7 +355,8 @@ not an artefact of the item set, and any arm answering one label most of the tim
 **Both models answer `left` about three times in four on a 50/50 set.** For Gemma that bias is the whole
 story — it scores at chance. For Cosmos3-Edge it is not: it clears chance by 15 points *despite* the bias,
 which means the bias is costing it accuracy it already has. That is a prior to correct, in the same way
-`k` corrects the distance under-read — and it is the cheapest thing on this page to fix.
+`k` corrects the distance under-read, and unlike the left_right prior it is genuinely a scale error that
+one constant fixes — see the order-swap probe above, which rules the prior out as a re-thresholding target.
 
 This is the distinction the Friday SFT decision hangs on: a model that **collapses to a constant** has a
 formatting or grounding failure that supervised fine-tuning on a few hundred examples can plausibly fix; a
@@ -505,8 +527,9 @@ why the floor had to be measured rather than assumed.
 
 **Artefacts.** AWQ checkpoint `quantized-int4-awq-v2/model.safetensors`, 2,408,300,272 bytes, built
 2026-09-10. ONNX export `onnx-v3/llm/model.onnx.data`, 866,451,480 bytes, same date — the export the
-Jetson also consumes. Engines are per-SM and not shared: the SM103 plan measured here is 884 MB against
-the Orin SM87 plan's 838.9 MiB from the same ONNX.
+Jetson also consumes. Engines are per-SM and not shared: the SM103 plan measured here is 843.7 MiB against
+the Orin SM87 plan's 838.9 MiB from the same ONNX — **843.7 MiB against 838.9 MiB, the same size, a
+different plan.** The point is not that one is larger; it is that they are not the same artefact.
 
 **Run dates.** Round-1 bf16 rows and the L0 control, simulated-INT4 and NF4 arms: 2026-09-09/10. Gemma
 Q4_0: 2026-09-10. TensorRT INT4-AWQ rows and the order-swap probe: **2026-09-11**.
