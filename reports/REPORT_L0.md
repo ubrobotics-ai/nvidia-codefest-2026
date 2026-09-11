@@ -53,11 +53,19 @@ balanced-prior correction is the cheapest accuracy left on the table anywhere in
 and nothing adjudicates. That is a perception problem, and it is the one that decides whether a box
 means "go and look" or "found".
 
-**Why not output format, which an earlier draft of this report recommended.** That recommendation
-predates the tolerant parser and the Cosmos-sees / Gemma-decides split. Under the split, Cosmos never
-emits the schema and no longer needs to — the contract lives in a deterministic converter — while
-Gemma already writes it at 0.958 validity. Training Cosmos to emit a schema it is not asked to emit
-buys nothing. If format SFT is argued for again, it needs a reason the parser does not already cover.
+**Why not output format.** An earlier draft of this report recommended it. That predates two things:
+the tolerant parser, which recovers the boxes (precision 0.529, recall 0.750) without the model ever
+emitting valid JSON, and L1's 2026-09-11 decision that Cosmos3-Edge takes **both** jobs, perception and
+the operator interface, with geometry deterministic in code. Under that architecture nothing asks the
+model for a contract. L1 also tried six contract rewrites — flat fixed-arity, single slot, line-per-
+entity, worked example, ROS 2 `Detection2DArray` — and **every one scored 0/12 detections** while
+improving format. Training the model toward a format it is not asked to produce would buy the thing
+that already works and cost the thing that does not.
+
+L1's own SFT candidates are **tool-calling** (0/21, but measured in August on a different serving stack
+with a bare schema, and unmeasured under the prompt that moved commands from 3/14 to 14/15) and the
+missing **UNKNOWN** path — `"Sing me a song"` returns `BACK` rather than a refusal. The left prior above
+is a third, and the only one this report contributes.
 
 ### Provenance of the TensorRT row — read before quoting it
 
