@@ -10,8 +10,10 @@ indices**, not option letters). Greedy decode, `enable_thinking=False` unless a 
 - **Distance k is fitted per engine build *and per range bucket*, provisionally 1.21.** Not a model
   constant, and not one number: the far bucket needs 1.34 where the global fit gives 1.21.
 - **Thinking on for grounding *and operator commands*, off for closed spatial queries.** L1 measured
-  commands at 14/15 with thinking on against 3/14 with it off, so the command path needs it too now
-  that Cosmos owns that path. Per-request flag; no global choice.
+  commands at 14/15 **with the conversational prompt and thinking on** — the measured configuration —
+  against 3/14 with a bare list and thinking off. Those runs changed prompt *and* thinking mode
+  together, so thinking's own contribution on the command path is not isolated; the rule follows the
+  configuration that was measured, not a demonstrated cause. Per-request flag; no global choice.
 - **No Orin accuracy claim until the engine-equivalence gate has run.** These rows are SM103.
 
 ## The finding
@@ -42,7 +44,8 @@ use): the INT4 answers score
 **2.88 points (14 items) thrown away for no reason.**
 
 That figure is smaller than the 11.1-point raw gap above, and the difference matters: almost
-all of the raw gap is removed by calibrating *at all* (18.31% uncalibrated to 36.01% calibrated), and
+all of the raw gap is removed by calibrating *at all* (18.52%
+uncalibrated to 36.21% calibrated, both on the scorer's basis), and
 only the 2.88-point remainder is the cost of using the *wrong* constant. Do not quote
 the raw gap as the cost of mis-calibration.
 
@@ -53,7 +56,7 @@ This report rules two candidates out and downgrades a third:
 - **Precision is not the problem.** 4-bit costs nothing once the arm is calibrated (p = 0.931), so
   there is nothing for training to repair there.
 - **Format is not the target.** The tolerant parser recovers the boxes (precision 0.529, recall 0.750)
-  without valid JSON ever being emitted, and L1's six contract rewrites each scored 0/12 detections
+  without valid JSON ever being emitted, and L1's five contract rewrites each scored 0/12 detections
   while improving format. Under the one-model architecture nothing asks the model for a contract.
 - **The left prior is a confidence signal, not a training target.** The order-swap probe above shows
   65.6% order-invariance: on two thirds of items the model returns the same word for a question and
@@ -146,10 +149,10 @@ dequantises on every matmul — it says nothing about what an INT4 engine would 
 **The round-1 43.94 tok/s figure is withdrawn.** The same model at the same precision on the same B300
 measured 76.17 tok/s one row below, in a different container — 1.7x apart from Python-side overhead alone.
 Neither is a deployment number. The Orin figures are the ones that count: **52.8 tok/s decode**, and for
-memory quote L1's **~4,830 MB system-wide peak for the full VLM**, not the 3,377 MB process-resident
-figure for the LLM arm alone — 3,377 + 942 (visual engine) + 512 (embedding) = 4,831, which is why the
-two numbers appear for one board. A reader who meets 3,377 here and 4,830 in L1 will stop at the
-discrepancy, so state the scope wherever either is quoted.
+memory, **~4,830 MB peak for the full VLM**. L1 also reports 3,377 MB for the AWQ/TensorRT arm; the two
+figures differ by close to the visual engine plus the embedding, but L1 labels both as system-wide
+sampling and is reconciling them, so **quote the scope alongside whichever number you use** rather than
+treating the difference as settled.
 
 Blank cells are honest blanks: the TensorRT arm is driven by `llm_inference` as a subprocess and the
 harness records wall-clock, not generated-token counts, and the llama.cpp arm reports no peak-memory
@@ -222,9 +225,6 @@ Chance levels, computed from the item set: **left_right 50.0%** (two-way choice)
 **mcq 14.22%** — mcq is not a four-option question, it offers between 3 and 13 numbered
 regions per item, so chance is the mean of 1/n_regions, not 1/4.
 
-Against those levels the L0 control reads left_right 64.80% and mcq
-17.76% for Cosmos3-Edge — the control's numbers, not round 1's.
-
 **Gemma's bf16 left_right (51.00%) is at chance, and its mcq (12.50%)
 is *below* the 14.22% chance level.** Signal that was never there cannot be lost, so its
 quantisation delta on those two tasks is uninformative — a flat Gemma left_right delta is **not** evidence
@@ -242,9 +242,10 @@ Estimator, stated so it is reproducible: **k = median(gt / pred)** on the fittin
 position in the id-sorted distance items, so the split is deterministic and identical across arms. Each half
 is scored with the *other* half's k, so **the gains in this table are held out.** The re-fitted McNemar
 rows and the own-constant figures quoted above are **in-sample** (each arm's full-set k applied to its own
-full set): 177 / 160 / 175 / 171 for bf16 / simulated / TensorRT / NF4 against the held-out 174 / 158 /
-167 / 174 below. In-sample is the right basis for *comparing arms* — every arm is favoured equally — and
-the wrong basis for claiming an absolute gain, which is why both are reported.
+full set): 178 / 162 / 176 / 172 for bf16 / simulated / TensorRT / NF4 against the held-out 174 / 158 /
+167 / 174 below. Every re-fitted McNemar row reconciles against the in-sample set: b - c equals the
+difference of the two counts in each case. In-sample is the right basis for *comparing arms* — every arm
+is favoured equally — and the wrong basis for claiming an absolute gain, which is why both are reported.
 
 | row | k (half A) | k (half B) | k mean | uncalibrated | held-out calibrated | gain (pts) | N usable |
 |---|---|---|---|---|---|---|---|
@@ -301,12 +302,11 @@ Not quite, and it matters most where the rover cares most. Median `gt/pred` by g
 | arm | [0,4) m | [4,8) | [8,12) | [12,+) | full-set median | spread |
 |---|---|---|---|---|---|---|
 | bf16 | 1.1028 | 1.2203 | 1.1228 | 1.1465 | 1.1492 | 0.118 |
-
-(The last column is the **full-set median** of `gt/pred`, not the split-half mean `k` in the table below —
-1.1492 here against 1.1546 there for bf16. Same estimator, different sample.)
-
 | **INT4 AWQ (TensorRT)** | 1.1277 | 1.2486 | 1.1516 | **1.3350** | 1.2083 | **0.207** |
 | NF4 | 1.0837 | 1.2317 | 1.1513 | 1.1441 | 1.1574 | 0.148 |
+
+The last column is the **full-set median** of `gt/pred`, not the split-half mean `k` in the table below —
+1.1492 here against 1.1546 there for bf16. Same estimator, different sample.
 
 bf16's far bucket (1.1465) sits on its global constant (1.1492); the AWQ engine's far bucket needs
 **1.3350 against a global 1.2083**, so a single constant systematically under-corrects exactly the long
@@ -354,14 +354,15 @@ not an artefact of the item set, and any arm answering one label most of the tim
 
 **Both models answer `left` about three times in four on a 50/50 set.** For Gemma that bias is the whole
 story — it scores at chance. For Cosmos3-Edge it is not: it clears chance by 15 points *despite* the bias,
-which means the bias is costing it accuracy it already has. That is a prior to correct, in the same way
-`k` corrects the distance under-read, and unlike the left_right prior it is genuinely a scale error that
-one constant fixes — see the order-swap probe above, which rules the prior out as a re-thresholding target.
+which means the bias is costing it accuracy it already has. It *looks* like a prior to correct, the way
+`k` corrects the distance under-read — and the order-swap probe above shows it is not. `k` fixes a scale
+error on a working measurement; this is the **absence** of the comparison on two thirds of items, and
+re-thresholding cannot recover a judgement that was never made.
 
-This is the distinction the Friday SFT decision hangs on: a model that **collapses to a constant** has a
-formatting or grounding failure that supervised fine-tuning on a few hundred examples can plausibly fix; a
-model whose answers are **spread out and still at chance** has no spatial signal to sharpen, and SFT on this
-task size will not create one.
+The histogram shape is still a useful diagnostic, just not a training signal: a model that **collapses to
+a constant** is failing to engage the task, while one whose answers are **spread out and still at chance**
+has no signal to sharpen. Cosmos is the third case — spread, above chance, and order-invariant — which is
+why it reads as fixable and is not.
 
 ## Answer histograms
 
@@ -431,7 +432,8 @@ took detections from 8 to 10 of 12; L0 finds it costs ~2 points and 27.7x the to
 and they are not in tension: L0 asks a closed question with a one-token answer already in the model,
 where extra reasoning only adds places to drift. L1 asks for open-vocabulary grounding plus coordinates,
 where the reasoning is doing perceptual work — writing the entity out before committing a box. The rule
-that satisfies both: **thinking on for grounding, off for closed spatial queries**, and it is a
+that satisfies both: **thinking on for grounding and operator commands, off for closed spatial
+queries**, and it is a
 per-request flag, so nothing has to be chosen globally.
 
 ## Per-item agreement — and why the INT4 disagreement needs a floor under it
@@ -504,7 +506,7 @@ and applied to the other.
 **Code.** Prompt, rendering and parser `scripts/spatial_qa_eval.py` (`build_prompt`, `render_item`,
 `parse_answer`); PyTorch arms `scripts/l0_cosmos_int4_sim.py`; TensorRT arm `scripts/l0_trt_eval.py`;
 scorer, `k` estimator and this document `scripts/l0_report.py` (`fit_k`, `mcnemar`, `wrong_k_cost`);
-order-swap probe `l0_swap_probe.py`.
+order-swap probe `scripts/l0_swap_probe.py`.
 
 **Versions.**
 
@@ -528,8 +530,8 @@ why the floor had to be measured rather than assumed.
 **Artefacts.** AWQ checkpoint `quantized-int4-awq-v2/model.safetensors`, 2,408,300,272 bytes, built
 2026-09-10. ONNX export `onnx-v3/llm/model.onnx.data`, 866,451,480 bytes, same date — the export the
 Jetson also consumes. Engines are per-SM and not shared: the SM103 plan measured here is 843.7 MiB against
-the Orin SM87 plan's 838.9 MiB from the same ONNX — **843.7 MiB against 838.9 MiB, the same size, a
-different plan.** The point is not that one is larger; it is that they are not the same artefact.
+the Orin SM87 plan's 838.9 MiB from the same ONNX — **the same size, a different plan.** The point is not
+that one is larger; it is that they are not the same artefact.
 
 **Run dates.** Round-1 bf16 rows and the L0 control, simulated-INT4 and NF4 arms: 2026-09-09/10. Gemma
 Q4_0: 2026-09-10. TensorRT INT4-AWQ rows and the order-swap probe: **2026-09-11**.

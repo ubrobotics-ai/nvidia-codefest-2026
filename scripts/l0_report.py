@@ -50,6 +50,21 @@ def acc(rows, cat, k=1.0):
     return ok, len(sel)
 
 
+def insample_distance(rows, k):
+    """Distance items scored correct at constant k, by the same rule mcnemar()'s right() uses.
+
+    Derived rather than written into the prose: an earlier revision quoted three different
+    counts for the same arms because two code paths scored distance differently.
+    """
+    n = 0
+    for r in rows or []:
+        if r.get("category") != "distance": continue
+        try: g, p = float(r["gt"]), float(r["pred"]) * k
+        except (ValueError, TypeError): continue
+        n += int(0.90 * g <= p <= 1.10 * g)
+    return n
+
+
 def wrong_k_cost(rows, k_right, k_wrong, n_total):
     """Points lost by applying another arm's calibration constant to this arm's distance answers.
 
@@ -154,7 +169,7 @@ def fmt(e, cat):
     return f"{c['ok']}/{c['n']} = {c['pct']:.2f}%" if c["n"] else "—"
 
 
-def write_md(res, out, chance, think=None, agr=None, mcn=None, trt_rows=None):
+def write_md(res, out, chance, think=None, agr=None, mcn=None, trt_rows=None, arm_rows=None):
     L = []
     A = L.append
     A(f"# L0 — model x precision, {len(res)} rows on one machine\n")
@@ -174,8 +189,10 @@ def write_md(res, out, chance, think=None, agr=None, mcn=None, trt_rows=None):
         A("- **Distance k is fitted per engine build *and per range bucket*, provisionally 1.21.** Not a model")
         A("  constant, and not one number: the far bucket needs 1.34 where the global fit gives 1.21.")
         A("- **Thinking on for grounding *and operator commands*, off for closed spatial queries.** L1 measured")
-        A("  commands at 14/15 with thinking on against 3/14 with it off, so the command path needs it too now")
-        A("  that Cosmos owns that path. Per-request flag; no global choice.")
+        A("  commands at 14/15 **with the conversational prompt and thinking on** — the measured configuration —")
+        A("  against 3/14 with a bare list and thinking off. Those runs changed prompt *and* thinking mode")
+        A("  together, so thinking's own contribution on the command path is not isolated; the rule follows the")
+        A("  configuration that was measured, not a demonstrated cause. Per-request flag; no global choice.")
         A("- **No Orin accuracy claim until the engine-equivalence gate has run.** These rows are SM103.\n")
         A("## The finding\n")
         A(f"**4-bit weights shift the distance *scale*; they do not destroy the information, and one constant")
@@ -201,7 +218,8 @@ def write_md(res, out, chance, think=None, agr=None, mcn=None, trt_rows=None):
         A(f"({wk['wrong']}/{wk['n']}) under the bf16 one —")
         A(f"**{wk['points']:.2f} points ({wk['items']} items) thrown away for no reason.**\n")
         A(f"That figure is smaller than the {db-dt:.1f}-point raw gap above, and the difference matters: almost")
-        A("all of the raw gap is removed by calibrating *at all* (18.31% uncalibrated to 36.01% calibrated), and")
+        A(f"all of the raw gap is removed by calibrating *at all* ({100.0*insample_distance(ct_rows_for_k,1.0)/wk['n']:.2f}%")
+        A(f"uncalibrated to {wk['pct_right']:.2f}% calibrated, both on the scorer's basis), and")
         A(f"only the {wk['points']:.2f}-point remainder is the cost of using the *wrong* constant. Do not quote")
         A("the raw gap as the cost of mis-calibration.\n")
         A("**The Friday SFT decision: L0 contributes no SFT target.** That is the finding, not a gap in it.\n")
@@ -209,7 +227,7 @@ def write_md(res, out, chance, think=None, agr=None, mcn=None, trt_rows=None):
         A("- **Precision is not the problem.** 4-bit costs nothing once the arm is calibrated (p = 0.931), so")
         A("  there is nothing for training to repair there.")
         A("- **Format is not the target.** The tolerant parser recovers the boxes (precision 0.529, recall 0.750)")
-        A("  without valid JSON ever being emitted, and L1's six contract rewrites each scored 0/12 detections")
+        A("  without valid JSON ever being emitted, and L1's five contract rewrites each scored 0/12 detections")
         A("  while improving format. Under the one-model architecture nothing asks the model for a contract.")
         A("- **The left prior is a confidence signal, not a training target.** The order-swap probe above shows")
         A("  65.6% order-invariance: on two thirds of items the model returns the same word for a question and")
@@ -299,10 +317,10 @@ def write_md(res, out, chance, think=None, agr=None, mcn=None, trt_rows=None):
     A("**The round-1 43.94 tok/s figure is withdrawn.** The same model at the same precision on the same B300")
     A("measured 76.17 tok/s one row below, in a different container — 1.7x apart from Python-side overhead alone.")
     A("Neither is a deployment number. The Orin figures are the ones that count: **52.8 tok/s decode**, and for")
-    A("memory quote L1's **~4,830 MB system-wide peak for the full VLM**, not the 3,377 MB process-resident")
-    A("figure for the LLM arm alone — 3,377 + 942 (visual engine) + 512 (embedding) = 4,831, which is why the")
-    A("two numbers appear for one board. A reader who meets 3,377 here and 4,830 in L1 will stop at the")
-    A("discrepancy, so state the scope wherever either is quoted.\n")
+    A("memory, **~4,830 MB peak for the full VLM**. L1 also reports 3,377 MB for the AWQ/TensorRT arm; the two")
+    A("figures differ by close to the visual engine plus the embedding, but L1 labels both as system-wide")
+    A("sampling and is reconciling them, so **quote the scope alongside whichever number you use** rather than")
+    A("treating the difference as settled.\n")
     A("Blank cells are honest blanks: the TensorRT arm is driven by `llm_inference` as a subprocess and the")
     A("harness records wall-clock, not generated-token counts, and the llama.cpp arm reports no peak-memory")
     A("figure through its server API. Neither blank is a deployment claim.\n")
@@ -346,8 +364,6 @@ def write_md(res, out, chance, think=None, agr=None, mcn=None, trt_rows=None):
     A(f"regions per item, so chance is the mean of 1/n_regions, not 1/4.\n")
     if "Cosmos3-Edge bf16 (L0 control)" in res and "Gemma-4-E4B-it bf16 (round 1)" in res:
         c_ = res["Cosmos3-Edge bf16 (L0 control)"]
-        A(f"Against those levels the L0 control reads left_right {c_['left_right']['pct']:.2f}% and mcq")
-        A(f"{c_['mcq']['pct']:.2f}% for Cosmos3-Edge — the control's numbers, not round 1's.\n")
         g = res["Gemma-4-E4B-it bf16 (round 1)"]
         A(f"**Gemma's bf16 left_right ({g['left_right']['pct']:.2f}%) is at chance, and its mcq ({g['mcq']['pct']:.2f}%)")
         A(f"is *below* the {chance['mcq']:.2f}% chance level.** Signal that was never there cannot be lost, so its")
@@ -365,10 +381,16 @@ def write_md(res, out, chance, think=None, agr=None, mcn=None, trt_rows=None):
     A("Estimator, stated so it is reproducible: **k = median(gt / pred)** on the fitting half; halves are even/odd")
     A("position in the id-sorted distance items, so the split is deterministic and identical across arms. Each half")
     A("is scored with the *other* half's k, so **the gains in this table are held out.** The re-fitted McNemar")
+    _ins = []
+    for _l in ("Cosmos3-Edge bf16 (L0 control)", "Cosmos3-Edge INT4 AWQ (simulated)",
+               "Cosmos3-Edge INT4 AWQ (real kernels, TensorRT)", "Cosmos3-Edge NF4 (real kernels)"):
+        _ins.append(str(insample_distance((arm_rows or {}).get(_l), res[_l]["k"]["k_mean"]))
+                    if _l in res and (arm_rows or {}).get(_l) else "—")
     A("rows and the own-constant figures quoted above are **in-sample** (each arm's full-set k applied to its own")
-    A("full set): 177 / 160 / 175 / 171 for bf16 / simulated / TensorRT / NF4 against the held-out 174 / 158 /")
-    A("167 / 174 below. In-sample is the right basis for *comparing arms* — every arm is favoured equally — and")
-    A("the wrong basis for claiming an absolute gain, which is why both are reported.\n")
+    A(f"full set): {' / '.join(_ins)} for bf16 / simulated / TensorRT / NF4 against the held-out 174 / 158 /")
+    A("167 / 174 below. Every re-fitted McNemar row reconciles against the in-sample set: b - c equals the")
+    A("difference of the two counts in each case. In-sample is the right basis for *comparing arms* — every arm")
+    A("is favoured equally — and the wrong basis for claiming an absolute gain, which is why both are reported.\n")
     A("| row | k (half A) | k (half B) | k mean | uncalibrated | held-out calibrated | gain (pts) | N usable |")
     A("|---|---|---|---|---|---|---|---|")
     for label, e in res.items():
@@ -413,13 +435,11 @@ def write_md(res, out, chance, think=None, agr=None, mcn=None, trt_rows=None):
     A("| arm | [0,4) m | [4,8) | [8,12) | [12,+) | full-set median | spread |")
     A("|---|---|---|---|---|---|---|")
     A("| bf16 | 1.1028 | 1.2203 | 1.1228 | 1.1465 | 1.1492 | 0.118 |")
-    A("")
-    A("(The last column is the **full-set median** of `gt/pred`, not the split-half mean `k` in the table below —")
-    A("1.1492 here against 1.1546 there for bf16. Same estimator, different sample.)")
-    A("")
     A("| **INT4 AWQ (TensorRT)** | 1.1277 | 1.2486 | 1.1516 | **1.3350** | 1.2083 | **0.207** |")
     A("| NF4 | 1.0837 | 1.2317 | 1.1513 | 1.1441 | 1.1574 | 0.148 |")
     A("")
+    A("The last column is the **full-set median** of `gt/pred`, not the split-half mean `k` in the table below —")
+    A("1.1492 here against 1.1546 there for bf16. Same estimator, different sample.\n")
     A("bf16's far bucket (1.1465) sits on its global constant (1.1492); the AWQ engine's far bucket needs")
     A("**1.3350 against a global 1.2083**, so a single constant systematically under-corrects exactly the long")
     A("readings. Held out, split-half, a four-bucket constant is worth **+3.29 points** on the AWQ arm")
@@ -462,13 +482,14 @@ def write_md(res, out, chance, think=None, agr=None, mcn=None, trt_rows=None):
     A("")
     A("**Both models answer `left` about three times in four on a 50/50 set.** For Gemma that bias is the whole")
     A("story — it scores at chance. For Cosmos3-Edge it is not: it clears chance by 15 points *despite* the bias,")
-    A("which means the bias is costing it accuracy it already has. That is a prior to correct, in the same way")
-    A("`k` corrects the distance under-read, and unlike the left_right prior it is genuinely a scale error that")
-    A("one constant fixes — see the order-swap probe above, which rules the prior out as a re-thresholding target.\n")
-    A("This is the distinction the Friday SFT decision hangs on: a model that **collapses to a constant** has a")
-    A("formatting or grounding failure that supervised fine-tuning on a few hundred examples can plausibly fix; a")
-    A("model whose answers are **spread out and still at chance** has no spatial signal to sharpen, and SFT on this")
-    A("task size will not create one.\n")
+    A("which means the bias is costing it accuracy it already has. It *looks* like a prior to correct, the way")
+    A("`k` corrects the distance under-read — and the order-swap probe above shows it is not. `k` fixes a scale")
+    A("error on a working measurement; this is the **absence** of the comparison on two thirds of items, and")
+    A("re-thresholding cannot recover a judgement that was never made.\n")
+    A("The histogram shape is still a useful diagnostic, just not a training signal: a model that **collapses to")
+    A("a constant** is failing to engage the task, while one whose answers are **spread out and still at chance**")
+    A("has no signal to sharpen. Cosmos is the third case — spread, above chance, and order-invariant — which is")
+    A("why it reads as fixable and is not.\n")
     A("## Answer histograms\n")
     A("Distribution of *parsed* answers per task per arm. This is what separates \"no spatial signal\" from")
     A("\"always answers the same thing\".\n")
@@ -490,7 +511,8 @@ def write_md(res, out, chance, think=None, agr=None, mcn=None, trt_rows=None):
         A("and they are not in tension: L0 asks a closed question with a one-token answer already in the model,")
         A("where extra reasoning only adds places to drift. L1 asks for open-vocabulary grounding plus coordinates,")
         A("where the reasoning is doing perceptual work — writing the entity out before committing a box. The rule")
-        A("that satisfies both: **thinking on for grounding, off for closed spatial queries**, and it is a")
+        A("that satisfies both: **thinking on for grounding and operator commands, off for closed spatial")
+        A("queries**, and it is a")
         A("per-request flag, so nothing has to be chosen globally.\n")
 
     if agr:
@@ -555,7 +577,7 @@ def write_md(res, out, chance, think=None, agr=None, mcn=None, trt_rows=None):
     A("**Code.** Prompt, rendering and parser `scripts/spatial_qa_eval.py` (`build_prompt`, `render_item`,")
     A("`parse_answer`); PyTorch arms `scripts/l0_cosmos_int4_sim.py`; TensorRT arm `scripts/l0_trt_eval.py`;")
     A("scorer, `k` estimator and this document `scripts/l0_report.py` (`fit_k`, `mcnemar`, `wrong_k_cost`);")
-    A("order-swap probe `l0_swap_probe.py`.\n")
+    A("order-swap probe `scripts/l0_swap_probe.py`.\n")
     A("**Versions.**\n")
     A("| component | version |")
     A("|---|---|")
@@ -576,8 +598,8 @@ def write_md(res, out, chance, think=None, agr=None, mcn=None, trt_rows=None):
     A("**Artefacts.** AWQ checkpoint `quantized-int4-awq-v2/model.safetensors`, 2,408,300,272 bytes, built")
     A("2026-09-10. ONNX export `onnx-v3/llm/model.onnx.data`, 866,451,480 bytes, same date — the export the")
     A("Jetson also consumes. Engines are per-SM and not shared: the SM103 plan measured here is 843.7 MiB against")
-    A("the Orin SM87 plan's 838.9 MiB from the same ONNX — **843.7 MiB against 838.9 MiB, the same size, a")
-    A("different plan.** The point is not that one is larger; it is that they are not the same artefact.\n")
+    A("the Orin SM87 plan's 838.9 MiB from the same ONNX — **the same size, a different plan.** The point is not")
+    A("that one is larger; it is that they are not the same artefact.\n")
     A("**Run dates.** Round-1 bf16 rows and the L0 control, simulated-INT4 and NF4 arms: 2026-09-09/10. Gemma")
     A("Q4_0: 2026-09-10. TensorRT INT4-AWQ rows and the order-swap probe: **2026-09-11**.\n")
 
@@ -754,7 +776,11 @@ def main():
     if tp.exists(): think = tp.read_text()
     Path(a.out).with_suffix(".json").write_text(json.dumps(res, indent=2))
     write_md(res, a.out, chance_levels(a.data), think, agr, mcn,
-             trt_rows=(load_raw(TRT, "awq_trt") or []) + (load_raw(TRT, "awq_trt_mcq") or []))
+             trt_rows=(load_raw(TRT, "awq_trt") or []) + (load_raw(TRT, "awq_trt_mcq") or []),
+             arm_rows={"Cosmos3-Edge bf16 (L0 control)": cb,
+                       "Cosmos3-Edge INT4 AWQ (simulated)": cq,
+                       "Cosmos3-Edge INT4 AWQ (real kernels, TensorRT)": ct,
+                       "Cosmos3-Edge NF4 (real kernels)": cn})
     print(json.dumps({k: {c: v[c] for c in ("distance", "left_right", "mcq", "task_mean")} for k, v in res.items()},
                      indent=2))
 
