@@ -4,20 +4,36 @@ Every accuracy below was produced on the same host, over the same items, with th
 rendered numbered region outlines and the same parser (including the mcq fix: answers are **region
 indices**, not option letters). Greedy decode, `enable_thinking=False` unless a row says otherwise.
 
+## Decision
+
+- **INT4-AWQ ships.** It is the deployed quantisation; nothing here argues against it.
+- **Distance k is fitted per engine build, provisionally 1.21.** Not a model constant.
+- **Thinking on for grounding, off for closed spatial queries.** Per-request flag; no global choice.
+- **No Orin accuracy claim until the engine-equivalence gate has run.** These rows are SM103.
+
 ## The finding
 
 **4-bit weights shift the distance *scale*; they do not destroy the information, and one constant
 restores it.** On the deployed TensorRT INT4-AWQ engine, distance reads 29.63% at bf16 against
 18.52% at INT4 — a 11.1-point loss, paired McNemar b=73 c=19, p < 0.0001. Re-fit the
-distance constant per arm and that loss disappears entirely: 68 vs 66, **p = 0.931**. left_right
-(p = 0.724) and mcq (p = 0.451) never moved. NF4 behaves the same way, and the two 4-bit schemes are
-indistinguishable from each other (p = 0.804).
+distance constant per arm and that loss disappears entirely: **b = 68, c = 66, p = 0.931**
+(discordant pairs, not accuracies; held out, bf16 174 vs TensorRT 167 of 449). left_right
+(p = 0.724) and mcq (p = 0.451) never moved.
+
+**NF4 does not shift the scale; AWQ does.** NF4 fits k = 1.1628 against bf16's 1.1546 and needs no
+re-fit to match it — raw distance 30.25% vs 29.63%, p = 0.815. AWQ fits 1.2148. So the two 4-bit
+schemes are indistinguishable only *after* each is re-fitted (p = 0.804); raw they are not
+(b = 21, c = 78, p < 0.00001). The scheme decides whether a constant is needed, not whether 4-bit works.
 
 ### What to do with it
 
-**Bake k = 1.2148 into the INT4 rover build, not 1.1546.** The constant is a property of the
-precision, not of the model. Measured on these items: the INT4 answers score
-36.01% under their own constant and 33.13% under the bf16 one —
+**Provisional k = 1.2148**, fitted on the **SM103** engine — not yet the number to bake. The constant
+is a property of the quantised artefact (bf16 1.1546, NF4 1.1628, AWQ 1.2148), so it is fitted per
+artefact, **including per engine build**. The deployed constant is the one fitted on the Orin engine's
+own distance outputs, from the engine-equivalence gate run below; bake that, not this. Measured on
+these items (in-sample, own k, over the 449 usable): the INT4 answers score
+36.01% (175/449) under their own constant and 33.13%
+(161/449) under the bf16 one —
 **2.88 points (14 items) thrown away for no reason.**
 
 That figure is smaller than the 11.1-point raw gap above, and the difference matters: almost
@@ -25,10 +41,23 @@ all of the raw gap is removed by calibrating *at all* (18.31% uncalibrated to 36
 only the 2.88-point remainder is the cost of using the *wrong* constant. Do not quote
 the raw gap as the cost of mis-calibration.
 
-**The Friday SFT decision.** L0 measures spatial reasoning that quantisation does not damage, so a
-4-bit deployment is not the thing to spend SFT budget repairing. Distance calibration is a one-scalar
-fit, not a training problem. If SFT is spent anywhere, the evidence points at *output format*, which
-is where L1 shows the real failure (0 of 24 schema-valid outputs) and where no constant helps.
+**The Friday SFT decision.** Not output format, and not precision. Two candidates beat both.
+
+*The left prior.* left_right is balanced 250/250, and the model answers "left" 72.4% of the time:
+**87.2% correct when the answer is left, 42.4% when it is right** — below chance on half the set. It
+survives quantisation almost unchanged (70.0%, 84.0%/44.0% on the TensorRT arm), so it is a property of
+the model, not of the 4-bit path. That is a decision-threshold problem sitting on 500 items, and a
+balanced-prior correction is the cheapest accuracy left on the table anywhere in this report.
+
+*Open-vocabulary precision.* L1 measures 0.529 precision on the case where Cosmos is the only proposer
+and nothing adjudicates. That is a perception problem, and it is the one that decides whether a box
+means "go and look" or "found".
+
+**Why not output format, which an earlier draft of this report recommended.** That recommendation
+predates the tolerant parser and the Cosmos-sees / Gemma-decides split. Under the split, Cosmos never
+emits the schema and no longer needs to — the contract lives in a deterministic converter — while
+Gemma already writes it at 0.958 validity. Training Cosmos to emit a schema it is not asked to emit
+buys nothing. If format SFT is argued for again, it needs a reason the parser does not already cover.
 
 ### Provenance of the TensorRT row — read before quoting it
 
@@ -61,7 +90,7 @@ fake-quant stand-in. Every row is scored by the dataset's own scorer on the same
 | Cosmos3-Edge bf16 (round 1) | bf16 | transformers | none | n/a — full precision | 141/486 = 29.01% | 326/500 = 65.20% | 80/456 = 17.54% | **47.11%** | 37.25% |
 | Cosmos3-Edge bf16 (L0 control) | bf16 | transformers | none | n/a — full precision | 144/486 = 29.63% | 324/500 = 64.80% | 81/456 = 17.76% | **47.21%** | 37.40% |
 | Cosmos3-Edge INT4 AWQ (simulated) | INT4 AWQ | transformers fake-quant (simulated INT4) | PTQ (modelopt AWQ), SIMULATED -- not engine kernels | simulated | 106/486 = 21.81% | 336/500 = 67.20% | 76/456 = 16.67% | **44.51%** | 35.23% |
-| Cosmos3-Edge INT4 AWQ (real kernels, TensorRT) | INT4 AWQ | tensorrt-edgellm | PTQ (modelopt AWQ), REAL INT4 kernels via the Edge-LLM ONNX export -- the same artefact the Jetson deploys | real (TensorRT Int4GroupwiseGemmPluginV2) | 90/486 = 18.52% | 320/500 = 64.00% | 75/456 = 16.45% | **41.26%** | 32.99% |
+| Cosmos3-Edge INT4 AWQ (real kernels, TensorRT) | INT4 AWQ | tensorrt-edgellm | PTQ (modelopt AWQ), REAL INT4 kernels via the Edge-LLM ONNX export -- same ONNX export as the Jetson; engine built for SM103 under the #205 + #207 patches | real (TensorRT Int4GroupwiseGemmPluginV2) | 90/486 = 18.52% | 320/500 = 64.00% | 75/456 = 16.45% | **41.26%** | 32.99% |
 | Cosmos3-Edge NF4 (real kernels) | NF4 | transformers + bitsandbytes NF4 (REAL 4-bit kernels) | PTQ (bitsandbytes NF4), real kernels -- a DIFFERENT quantiser from the shipped AWQ checkpoint | real (bitsandbytes) | 147/486 = 30.25% | 323/500 = 64.60% | 80/456 = 17.54% | **47.42%** | 37.46% |
 | Gemma-4-E4B-it bf16 (round 1) | bf16 | transformers | none | n/a — full precision | 79/486 = 16.26% | 255/500 = 51.00% | 57/456 = 12.50% | **33.63%** | 26.59% |
 | Gemma-4-E4B-it QAT Q4_0 (Unsloth) | Q4_0 | llama.cpp (llama-server, CUDA) | QAT (upstream Google), packed uniform Q4_0 by Unsloth -- the UD-Q4_K_XL filename is a misnomer: 100% of parameters are stored Q4_0, no K-quants | real (llama.cpp) | 69/486 = 14.20% | 249/500 = 49.80% | 54/456 = 11.84% | **32.00%** | 25.28% |
@@ -72,7 +101,7 @@ N per cell is printed in the cell. distance N=486, left_right N=500, mcq N=456.
 
 | row | tok/s | peak GB | note |
 |---|---|---|---|
-| Cosmos3-Edge bf16 (round 1) | 43.94 | 5.1 | B300 |
+| Cosmos3-Edge bf16 (round 1) | ~~43.94~~ withdrawn | 5.1 | B300 |
 | Cosmos3-Edge bf16 (L0 control) | 76.17 | 5.1 | B300 -- NOT Orin; deployment figures come from the Jetson side |
 | Cosmos3-Edge INT4 AWQ (simulated) | 24.44 | 5.6 | B300 -- NOT Orin; deployment figures come from the Jetson side |
 | Cosmos3-Edge INT4 AWQ (real kernels, TensorRT) | — | — | B300 |
@@ -94,7 +123,7 @@ figure through its server API. Neither blank is a deployment claim.
 
 ## Points lost to 4-bit
 
-Positive = **worse** at 4 bits. Read every row against the McNemar table above: most of these
+Positive = **worse** at 4 bits. Read every row against the McNemar table below: most of these
 differences are churn, not loss.
 
 | model | task | bf16 | 4-bit | points lost (+ = worse at 4-bit) |
@@ -159,6 +188,9 @@ Chance levels, computed from the item set: **left_right 50.0%** (two-way choice)
 **mcq 14.22%** — mcq is not a four-option question, it offers between 3 and 13 numbered
 regions per item, so chance is the mean of 1/n_regions, not 1/4.
 
+Against those levels the L0 control reads left_right 64.80% and mcq
+17.76% for Cosmos3-Edge — the control's numbers, not round 1's.
+
 **Gemma's bf16 left_right (51.00%) is at chance, and its mcq (12.50%)
 is *below* the 14.22% chance level.** Signal that was never there cannot be lost, so its
 quantisation delta on those two tasks is uninformative — a flat Gemma left_right delta is **not** evidence
@@ -174,7 +206,11 @@ tasks are informative for Cosmos3-Edge.
 
 Estimator, stated so it is reproducible: **k = median(gt / pred)** on the fitting half; halves are even/odd
 position in the id-sorted distance items, so the split is deterministic and identical across arms. Each half
-is scored with the *other* half's k, so every reported gain is held out.
+is scored with the *other* half's k, so **the gains in this table are held out.** The re-fitted McNemar
+rows and the own-constant figures quoted above are **in-sample** (each arm's full-set k applied to its own
+full set): 177 / 160 / 175 / 171 for bf16 / simulated / TensorRT / NF4 against the held-out 174 / 158 /
+167 / 174 below. In-sample is the right basis for *comparing arms* — every arm is favoured equally — and
+the wrong basis for claiming an absolute gain, which is why both are reported.
 
 | row | k (half A) | k (half B) | k mean | uncalibrated | held-out calibrated | gain (pts) | N usable |
 |---|---|---|---|---|---|---|---|
@@ -185,6 +221,16 @@ is scored with the *other* half's k, so every reported gain is held out.
 | Cosmos3-Edge NF4 (real kernels) | 1.1561 | 1.1696 | 1.1628 | 146 | 174 | +6.24 | 449/486 |
 | Gemma-4-E4B-it bf16 (round 1) | 0.9456 | 0.8981 | 0.9218 | 78 | 60 | -4.07 | 442/486 |
 | Gemma-4-E4B-it QAT Q4_0 (Unsloth) | 1.1522 | 1.124 | 1.1381 | 68 | 68 | +0.00 | 449/486 |
+| **Cosmos3-Edge INT4 AWQ — Orin engine (SM87)** | — | — | — | — | — | — | — |
+
+The Orin row is deliberately blank. It is filled by the engine-equivalence gate run, and **its constant is
+the one that gets baked** — the SM103 figure above is provisional until then.
+
+**This table counts differently from the headline table, by 1-2 items per arm** (bf16 143 here against
+144 there; simulated 104/106; NF4 146/147; TensorRT 89/90). The calibration pipeline can only use items
+where both ground truth and prediction parse as positive numbers — it needs a `gt/pred` ratio — so it
+drops 37-38 per arm. The dataset's own scorer still scores those items, and one or two of them happen to
+land inside the +/-10% band anyway. Quote 486-based figures or 449-based ones, never both in a sentence.
 
 **Gemma's constant flips sign under quantisation** — 0.9218 at bf16 to 1.1381 at Q4_0. It changes from a
 long-reader to a short-reader, and calibration *hurts* it at bf16 (-4.07 pts) while doing nothing at Q4_0
@@ -303,7 +349,7 @@ per-request flag, so nothing has to be chosen globally.
 
 ## Per-item agreement — and why the INT4 disagreement needs a floor under it
 
-§4b asks for a per-item agreement check between precisions. That number is uninterpretable on its own,
+The bake-off hand-off asks for a per-item agreement check between precisions. That number is uninterpretable on its own,
 because two runs of the *same model at the same precision* do not agree either. Both are measured here.
 
 | comparison | identical predictions | per category |
@@ -327,11 +373,13 @@ floor is not evidence of quantisation damage.
 
 ## What these numbers are not
 
-- The Cosmos INT4 row is **simulated quantisation** — `mtq.quantize()` fake-quant weights inside PyTorch,
-  not engine kernels. It is the right number for the weight-precision delta and the wrong one for runtime.
-  The jetson1 per-item agreement check against these outputs is what covers the difference.
+- **There are two INT4 rows and they answer different questions.** The *simulated* one is
+  `mtq.quantize()` fake-quant inside PyTorch — weights on the INT4 grid, GEMM still in bf16 — so it is the
+  weight-precision delta and says nothing about runtime. The *TensorRT* one is real INT4 kernels, but on
+  **SM103**, which is not the Orin engine: same ONNX export, different plan. Neither row licenses an Orin
+  accuracy claim. The **B300-vs-Orin engine-equivalence gate** is what closes that gap, and it has not run.
 - The two 4-bit rows are **not the same kind of object**: Gemma's is QAT (quantisation-aware trained
-  upstream by Google, then packed to Q4_K_XL); Cosmos3-Edge's is PTQ (post-training AWQ). A QAT model has
+  upstream by Google, then packed to Q4_0); Cosmos3-Edge's is PTQ (post-training AWQ). A QAT model has
   been trained to survive its own quantisation; a PTQ model has not. Do not read the two deltas as a like-
   for-like comparison of "how well each model quantises".
 - **No per-item L0 output is reproducible elsewhere to better than ~5%.** Two runs of the *same* model at
@@ -342,7 +390,7 @@ floor is not evidence of quantisation damage.
 - The Gemma artefact is **Q4_0, not Q4_K_XL**, despite the `UD-Q4_K_XL` filename: 100% of parameters are
   stored Q4_0, no K-quants. This is the artefact deployed on jetson0, so any page or hand-off calling the
   incumbent "Q4_K_XL" is repeating a filename, not a format.
-- Parse-failure rates differ sharply by arm and are given in the k table's `N usable` column. Gemma bf16
-  yields a usable distance number on 442/486 items — a 9% failure rate — against 449/486 for every Cosmos
-  arm. Given how much L1 turns on contract adherence, that gap is a finding, not bookkeeping.
+- Parse-failure rates are in the k table's `N usable` column. Gemma bf16 yields a usable distance number
+  on 442/486 against 449/486 for the Cosmos arms (448 for the simulated one) — 44 failures against 37.
+  Reported for completeness; at p ~ 0.4 it is not a difference this item set establishes.
 - Nothing here has been executed on a Jetson.
