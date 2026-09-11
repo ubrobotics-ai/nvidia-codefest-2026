@@ -43,11 +43,31 @@ the raw gap as the cost of mis-calibration.
 
 **The Friday SFT decision.** Not output format, and not precision. Two candidates beat both.
 
-*The left prior.* left_right is balanced 250/250, and the model answers "left" 72.4% of the time:
-**87.2% correct when the answer is left, 42.4% when it is right** — below chance on half the set. It
-survives quantisation almost unchanged (70.0%, 84.0%/44.0% on the TensorRT arm), so it is a property of
-the model, not of the 4-bit path. That is a decision-threshold problem sitting on 500 items, and a
-balanced-prior correction is the cheapest accuracy left on the table anywhere in this report.
+*The left prior — measured, and it is not the cheap win an earlier draft of this report claimed.*
+left_right is balanced 250/250 and the model answers "left" 72.4% of the time: **87.2% correct when
+the answer is left, 42.4% when it is right**, below chance on half the set, and it survives
+quantisation nearly unchanged. The obvious fix is order-debiasing — ask the mirrored question about
+the same image and average — so it was run on all 500 items against the TensorRT engine:
+
+| | n = 500 |
+|---|---|
+| same answer to the mirrored question (**the prior**) | 328/500 = **65.6%** |
+| answer flipped, as geometry requires | 172/500 = 34.4% |
+| accuracy, as run | 320/500 = 64.00% |
+| accuracy, order-debiased | 254/500 = 50.80% (**-13.20**) |
+| accuracy on the order-consistent subset | 121/172 = **70.35%** |
+
+**Order-debiasing makes it worse, and cannot help.** On two thirds of items the model returns the same
+word for a question and its mirror, so there is no latent spatial judgement on those items to recover;
+averaging can at best keep the 121 it gets right when consistent and guess the rest, a ceiling near 57%
+— below the 64% it already scores. The prior is not a mis-set threshold on a working comparison. It is
+the absence of the comparison on most items, partly masked by a bias that happens to pay.
+
+What survives: the model is meaningfully better when it *is* order-consistent (70.35% against 60.7% on
+the rest), so order-consistency is a usable **confidence signal** at 2x inference cost — worth having
+on a rover that can decline to answer. And a logit-bias fix cannot be evaluated from these outputs at
+all, because the harness saves decoded text, not scores. Any SFT case here has to be argued on the
+65.6% order-invariance, not on the 72/28 answer split.
 
 *Open-vocabulary precision.* L1 measures 0.529 precision on the case where Cosmos is the only proposer
 and nothing adjudicates. That is a perception problem, and it is the one that decides whether a box
@@ -78,6 +98,23 @@ different plans from the same export, so "the same artefact the Jetson deploys" 
 and false of the engine. That makes an engine-equivalence gate runnable — B300 outputs on these 986
 items against Orin outputs on a 200-pair subsample, compared per item — and **it has not been run.**
 Until it is, this row licenses claims about INT4-AWQ *as a quantisation*, not about the Orin engine.
+
+**What passing means.** The gate cannot pass or fail without a criterion, and the hand-off's
+">= 99% per-item agreement" cannot be used as written: this report's own environment floor is 87.9%
+on distance between two containers running the *same* model, so 99% is unreachable by construction.
+The criterion is therefore stated against the floor:
+
+| check | threshold |
+|---|---|
+| per-item agreement, distance | not below the floor, **>= ~88%** |
+| per-item agreement, left_right and mcq | **>= ~99%** (the floor is ~95-99% on the discrete tasks) |
+| paired McNemar, each task, on the 200 pairs | **p > 0.05** — no detectable systematic difference |
+| k re-fitted on the Orin distance outputs | fills the blank row above, **per range bucket** |
+
+Agreement below the floor on a discrete task means the two engines differ; agreement above it means
+they are indistinguishable *at the resolution this benchmark has*, which is the strongest claim the
+instrument supports. A McNemar p > 0.05 is the accompanying check that the differences are unsigned
+churn rather than one engine being consistently worse.
 
 ## Naming, fixed
 
@@ -240,6 +277,26 @@ where both ground truth and prediction parse as positive numbers — it needs a 
 drops 37-38 per arm. The dataset's own scorer still scores those items, and one or two of them happen to
 land inside the +/-10% band anyway. Quote 486-based figures or 449-based ones, never both in a sentence.
 
+### Is one constant really one constant?
+
+Not quite, and it matters most where the rover cares most. Median `gt/pred` by ground-truth range:
+
+| arm | [0,4) m | [4,8) | [8,12) | [12,+) | global | spread |
+|---|---|---|---|---|---|---|
+| bf16 | 1.1028 | 1.2203 | 1.1228 | 1.1465 | 1.1492 | 0.118 |
+| **INT4 AWQ (TensorRT)** | 1.1277 | 1.2486 | 1.1516 | **1.3350** | 1.2083 | **0.207** |
+| NF4 | 1.0837 | 1.2317 | 1.1513 | 1.1441 | 1.1574 | 0.148 |
+
+bf16's far bucket (1.1465) sits on its global constant (1.1492); the AWQ engine's far bucket needs
+**1.3350 against a global 1.2083**, so a single constant systematically under-corrects exactly the long
+readings. Held out, split-half, a four-bucket constant is worth **+3.29 points** on the AWQ arm
+(167 -> 183 of 486), **+0.00** on bf16 and **-1.44** on NF4. So AWQ's under-read is range-dependent and
+the other two arms' are not — which is a second way of saying the constant belongs to the artefact.
+
+This qualifies the headline rather than overturning it: one global constant still recovers almost all of
+the loss (p = 0.931 against bf16). But whoever bakes a constant for a rover that reads at 12 m and beyond
+should fit it per range bucket, and the gate below should report k per bucket, not one number.
+
 **Gemma's constant flips sign under quantisation** — 0.9218 at bf16 to 1.1381 at Q4_0. It changes from a
 long-reader to a short-reader, and calibration *hurts* it at bf16 (-4.07 pts) while doing nothing at Q4_0
 (+0.00). That is the signature of a model whose distance outputs carry no consistent scale to correct;
@@ -395,6 +452,10 @@ floor is not evidence of quantisation damage.
   That is the environment floor, and it bounds every per-item comparison in this document: a disagreement
   smaller than the floor is not evidence. It is also why the paired tests here compare arms run in one
   container, and why an Orin-vs-B300 engine gate has to be read against the same floor.
+- **The Gemma pair is the exception to that.** Its bf16 row is the round-1 container and its Q4_0 row is
+  llama.cpp — a different runtime, not just a different container — so that comparison carries more than
+  the floor's worth of nuisance variation. It changes no conclusion, because every Gemma delta is churn
+  already (all three p > 0.3), but the pair should not be quoted as a clean precision contrast.
 - The Gemma artefact is **Q4_0, not Q4_K_XL**, despite the `UD-Q4_K_XL` filename: 100% of parameters are
   stored Q4_0, no K-quants. This is the artefact deployed on jetson0, so any page or hand-off calling the
   incumbent "Q4_K_XL" is repeating a filename, not a format.
@@ -402,3 +463,50 @@ floor is not evidence of quantisation damage.
   on 442/486 against 449/486 for the Cosmos arms (448 for the simulated one) — 44 failures against 37.
   Reported for completeness; at p ~ 0.4 it is not a difference this item set establishes.
 - Nothing here has been executed on a Jetson.
+
+## Reproducibility
+
+**Dataset.** NVIDIA *PhysicalAI-Spatial-Intelligence-Warehouse* (`nvidia/PhysicalAI-Spatial-Intelligence-
+Warehouse` on the Hugging Face Hub), CC-BY-4.0, synthetic warehouse scenes rendered in Omniverse with
+rule-generated Q&A refined by Llama-3.1-70B-Instruct (so the annotations also carry Llama 3.1 Community
+License terms). **Gated — request access; cited, never redistributed.** Split: `val.json`, 1,942 items, of
+which this report scores 1,442 — distance 486, left_right 500, mcq 456. The `count` category (500) is not
+used. The model is shown a rendered frame with the referenced regions drawn as numbered outlines, not the
+source image.
+
+**Scoring rules.** distance: correct within **+/-10%** of ground truth after applying the arm's constant
+`k`. left_right and mcq: **exact match** (mcq answers are region indices, not option letters). Scored by
+the dataset's own `utils/compute_scores.py`; `k` is a split-half median of `gt/pred`, fitted on one half
+and applied to the other.
+
+**Code.** Prompt, rendering and parser `scripts/spatial_qa_eval.py` (`build_prompt`, `render_item`,
+`parse_answer`); PyTorch arms `scripts/l0_cosmos_int4_sim.py`; TensorRT arm `scripts/l0_trt_eval.py`;
+scorer, `k` estimator and this document `scripts/l0_report.py` (`fit_k`, `mcnemar`, `wrong_k_cost`);
+order-swap probe `l0_swap_probe.py`.
+
+**Versions.**
+
+| component | version |
+|---|---|
+| transformers (bf16, simulated-INT4, NF4 arms) | 5.16.1 |
+| transformers (round-1 container, environment-floor pair) | round-1 image, **not identical** to the above |
+| torch | 2.13.0+cu130 |
+| nvidia-modelopt (AWQ quantise) | 0.33.0 |
+| bitsandbytes (NF4) | as packaged in the run container |
+| llama.cpp (Gemma Q4_0) | b9602 |
+| TensorRT | 10.13.2.6 |
+| TensorRT Edge-LLM | `e8b2952` (v0.10.1) **+ 7 local patches** = NVIDIA/TensorRT-Edge-LLM #205 and #207 |
+| CUDA | 13.0 |
+| hardware | DGX B300, SM103 |
+
+The two transformers builds behind the environment floor are **not the same image** — that is what the
+floor measures. The round-1 container was not version-pinned at the time, which is itself a finding: it is
+why the floor had to be measured rather than assumed.
+
+**Artefacts.** AWQ checkpoint `quantized-int4-awq-v2/model.safetensors`, 2,408,300,272 bytes, built
+2026-09-10. ONNX export `onnx-v3/llm/model.onnx.data`, 866,451,480 bytes, same date — the export the
+Jetson also consumes. Engines are per-SM and not shared: the SM103 plan measured here is 884 MB against
+the Orin SM87 plan's 838.9 MiB from the same ONNX.
+
+**Run dates.** Round-1 bf16 rows and the L0 control, simulated-INT4 and NF4 arms: 2026-09-09/10. Gemma
+Q4_0: 2026-09-10. TensorRT INT4-AWQ rows and the order-swap probe: **2026-09-11**.
