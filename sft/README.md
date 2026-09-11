@@ -10,6 +10,7 @@ half of Phase 1 are done; the rest needs files that live on the robot.
 | `data/commands.jsonl` | 890 examples. |
 | `train_lora.py` | Phase 2. LoRA r=16 on the **bf16** checkpoint, split seed-disjoint. |
 | `eval_lora.py` | Phase 3. Scores base vs adapter on the held-out dev slice. |
+| `merge_lora.py` | Phase 4. Folds the adapter into the checkpoint's real shards, and verifies it on disk. |
 
 ## What is generated, and why in these proportions
 
@@ -99,3 +100,68 @@ These are command-classification numbers on generated data, measured on one seed
 split with no confidence interval and no repeat at a second seed. They are **not** the
 spatial-QA numbers in `../reports/REPORT_L0.md` and do not transfer to them. The
 `BASELINE.json` regression gates have not been re-run against the adapter.
+
+
+## Phases 4-6 — does it survive INT4?
+
+Adapter merged into bf16, re-quantised with the **same recipe `BASELINE.json` froze** (only
+`--model_dir` changed), re-exported, and rebuilt as an SM103 engine. Census on the new ONNX:
+**169 `Int4GroupwiseGemmPluginV2` in the LLM graph, 0 in visual** — the Phase 4 gate.
+
+The 179 seed-disjoint dev items, through the engine:
+
+| bucket | n | INT4 engine | bf16 + LoRA |
+|---|---:|---:|---:|
+| FORWARD | 34 | 85.3% | 97.1% |
+| BACK | 11 | 100.0% | 100.0% |
+| LEFT | 18 | 100.0% | 100.0% |
+| RIGHT | 22 | 100.0% | 95.5% |
+| STOP | 19 | 100.0% | 100.0% |
+| SEARCH | 23 | 100.0% | 100.0% |
+| REPORT | 12 | 100.0% | 100.0% |
+| UNKNOWN | 40 | 80.0% | 80.0% |
+| **overall** | **179** | **92.7%** | **94.4%** |
+
+Unparseable outputs: 0.
+
+### The 1.7-point gap is serving format, not quantisation
+
+`llm_inference` builds its own prompt — a **doubled system block** (ours, then an empty one)
+plus a trailing `<think></think>` — which is not what the HF chat template produced during
+training. Scoring bf16 through the template and INT4 through the engine would confound the
+two. So the control replays the engine's exact formatted strings through the bf16 merged
+checkpoint:
+
+| arm | score |
+|---|---:|
+| bf16, HF chat template | 94.4% |
+| bf16, **engine's** format | **92.7%** |
+| INT4 engine | **92.7%** |
+
+Paired on the same items: **3 discordant each way, exact McNemar p = 1.0000.** Quantisation
+costs nothing measurable here, matching L0's finding on spatial QA (p = 0.931). The entire
+1.7-point drop is the prompt mismatch — which is worth 3 items, and is a *fixable* loss:
+train under the string the runtime actually sends.
+
+### A failure worth recording
+
+The first pass through Phase 4 reported success at every stage and was wrong. `merge_lora.py`
+wrote the merged tensors to a side file and re-pointed `model.safetensors.index.json` at it;
+`tensorrt-edgellm-quantize` resolves weights through the `transformer/` directory and ignored
+the index, so it quantised the **un-finetuned** shards. Quantise exit 0, export exit 0, the
+169/169 census passed, the engine built and answered coherently — and every one of the 224
+language weight tensors was byte-identical to `quantized-int4-awq-v2`.
+
+What caught it was the measurement, not the pipeline: the engine scored **48.6%**, against
+51.4% for the base and 94.4% for the adapter, with REPORT at 0/12 — the base model's exact
+signature. `merge_lora.py` now rewrites the real shards and re-opens them to assert every
+merged tensor differs from the base on disk.
+
+**None of the green lights in this pipeline distinguish "the adapter is in the engine" from
+"the adapter is not in the engine."** Only a checkpoint diff and a held-out score do.
+
+### Still not done
+
+The `BASELINE.json` L0 gates have not been re-run against this engine — 1,442 spatial-QA
+items, and `k` needs re-fitting because AWQ scales were re-fitted on all 168 changed tensors.
+Command accuracy surviving INT4 says nothing about whether spatial QA did.
