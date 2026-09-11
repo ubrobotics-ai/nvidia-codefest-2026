@@ -58,7 +58,7 @@ This report rules two candidates out and downgrades a third:
 - **Format is not the target.** The tolerant parser recovers the boxes (precision 0.529, recall 0.750)
   without valid JSON ever being emitted, and L1's five contract rewrites each scored 0/12 detections
   while improving format. Under the one-model architecture nothing asks the model for a contract.
-- **The left prior is a confidence signal, not a training target.** The order-swap probe above shows
+- **The left prior is a confidence signal, not a training target.** The order-swap probe below shows
   65.6% order-invariance: on two thirds of items the model returns the same word for a question and
   its mirror. That is the absence of a spatial comparison, and a few hundred supervised examples do
   not create one. Order-consistency is worth having as a *signal* (70.35% vs 60.7%); the 72/28 answer
@@ -83,8 +83,9 @@ fix in #205, **both unmerged at the time of writing**. The row therefore exists 
 
 It shares the **ONNX export** with the Jetson deployment, not the engine. SM103 and SM87 produce
 different plans from the same export, so "the same artefact the Jetson deploys" is true of the ONNX
-and false of the engine. That makes an engine-equivalence gate runnable — B300 outputs on these 986
-items against Orin outputs on a 200-pair subsample, compared per item — and **it has not been run.**
+and false of the engine. That makes an engine-equivalence gate runnable — B300 outputs on all **1,442**
+scored items (986 distance + left_right, 456 mcq, which is why the criterion below covers all three
+tasks) against Orin outputs on a 200-pair subsample, compared per item — and **it has not been run.**
 Until it is, this row licenses claims about INT4-AWQ *as a quantisation*, not about the Orin engine.
 
 **What passing means.** The gate cannot pass or fail without a criterion, and the hand-off's
@@ -243,8 +244,9 @@ position in the id-sorted distance items, so the split is deterministic and iden
 is scored with the *other* half's k, so **the gains in this table are held out.** The re-fitted McNemar
 rows and the own-constant figures quoted above are **in-sample** (each arm's full-set k applied to its own
 full set): 178 / 162 / 176 / 172 for bf16 / simulated / TensorRT / NF4 against the held-out 174 / 158 /
-167 / 174 below. Every re-fitted McNemar row reconciles against the in-sample set: b - c equals the
-difference of the two counts in each case. In-sample is the right basis for *comparing arms* — every arm
+167 / 174 below, and 54 / 70 for the two Gemma rows. Every re-fitted McNemar row — all seven —
+reconciles against the in-sample set: b - c equals the difference of the two counts in each case.
+In-sample is the right basis for *comparing arms* — every arm
 is favoured equally — and the wrong basis for claiming an absolute gain, which is why both are reported.
 
 | row | k (half A) | k (half B) | k mean | uncalibrated | held-out calibrated | gain (pts) | N usable |
@@ -310,8 +312,9 @@ The last column is the **full-set median** of `gt/pred`, not the split-half mean
 
 bf16's far bucket (1.1465) sits on its global constant (1.1492); the AWQ engine's far bucket needs
 **1.3350 against a global 1.2083**, so a single constant systematically under-corrects exactly the long
-readings. Held out, split-half, a four-bucket constant is worth **+3.29 points** on the AWQ arm
-(167 -> 183 of 486), **+0.00** on bf16 and **-1.44** on NF4. So AWQ's under-read is range-dependent and
+readings. Held out, split-half, a four-bucket constant is worth **+3.56 points** on the AWQ arm
+(167 -> 183 of the 449 usable, the same basis as the `gain` column below, where the global constant is
+worth +17.37), **+0.00** on bf16 and **-1.44** on NF4. So AWQ's under-read is range-dependent and
 the other two arms' are not — which is a second way of saying the constant belongs to the artefact.
 
 This qualifies the headline rather than overturning it: one global constant still recovers almost all of
