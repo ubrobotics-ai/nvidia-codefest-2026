@@ -36,6 +36,42 @@ def build_model(model_dir, arm, calib_samples, dtype):
     from tensorrt_edgellm.quantization.datasets import resolve_dataset, dataset_name
     from transformers import AutoProcessor
 
+    if arm == "nf4":
+        # Real 4-bit kernels, not simulation. bitsandbytes NF4 executes quantised matmuls on device, so tok/s
+        # and peak memory here MEAN something -- unlike the int4 arm, whose fake-quant dequantises every matmul.
+        # It is a different quantiser from the shipped modelopt AWQ checkpoint (NormalFloat4, blockwise, no AWQ
+        # smoothing), so this arm answers "what does naive 4-bit PTQ cost?", not "what does our checkpoint cost?".
+        import torch
+        from transformers import AutoModelForImageTextToText, AutoProcessor, BitsAndBytesConfig
+        # `llm_int8_skip_modules` patterns are matched by `should_convert_module` with
+        # `re.match(f"{key}\\.", full_name)` -- ANCHORED AT THE START of the module path -- or an exact suffix.
+        # Module names here are `model.visual.encoder.layers.N...`, so a bare "visual" matches nothing and
+        # silently skips nothing: the first attempt quantised the vision tower too (333 Linear4bit instead of
+        # ~169) and the model emitted degenerate repetition on 98% of items. Patterns must be rooted.
+        qc = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
+                                bnb_4bit_compute_dtype=torch.bfloat16,
+                                bnb_4bit_use_double_quant=True,
+                                llm_int8_skip_modules=["model.visual", "model.projector"])
+        model = AutoModelForImageTextToText.from_pretrained(
+            model_dir, quantization_config=qc, device_map="cuda", trust_remote_code=True).eval()
+        processor = AutoProcessor.from_pretrained(model_dir, trust_remote_code=True)
+        q4 = [n for n, m in model.named_modules() if type(m).__name__ == "Linear4bit"]
+        leaked = [n for n in q4 if ".visual." in n or ".projector." in n]
+        print(f"[nf4] Linear4bit modules: {len(q4)}  (AWQ quantises 169: 28 layers x 6 + lm_head)", flush=True)
+        print(f"[nf4] vision/projector layers wrongly quantised: {len(leaked)}", flush=True)
+        # Too FEW was the only case the first guard caught. Too MANY is what actually happened.
+        if not q4:
+            raise SystemExit("FAIL: no Linear4bit modules -- nothing was quantised.")
+        if leaked:
+            for n in leaked[:5]: print(f"[nf4]     {n}", flush=True)
+            raise SystemExit(f"FAIL: {len(leaked)} vision/projector Linears were quantised. AWQ leaves them "
+                             f"FP16, so this arm would not be comparable -- and a 4-bit vision tower produces "
+                             f"degenerate output. Aborting instead of scoring it.")
+        if not (150 <= len(q4) <= 180):
+            raise SystemExit(f"FAIL: {len(q4)} Linear4bit modules, expected ~169 to match the AWQ arm.")
+        return model, processor, {"quantized": True, "quantizer": "bitsandbytes NF4", "linear4bit": len(q4),
+                                  "real_kernels": True}
+
     model, tokenizer, _ = _load_model(model_dir, dtype=dtype, device="cuda")
     model.eval()
     # Evaluate through a PLAIN AutoProcessor, the way round 1 did. `_load_model` builds its own with
@@ -80,7 +116,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True); ap.add_argument("--out", required=True)
     ap.add_argument("--model", default=os.environ.get("WORK", "") + "/edge/Cosmos3-Edge")
-    ap.add_argument("--arm", choices=["int4", "bf16"], required=True)
+    ap.add_argument("--arm", choices=["int4", "bf16", "nf4"], required=True)
     ap.add_argument("--categories", nargs="+", default=["distance", "left_right"])
     ap.add_argument("--tag", default=None)
     ap.add_argument("--limit", type=int, default=0)
@@ -90,6 +126,8 @@ def main():
     ap.add_argument("--dtype", default="bf16", choices=["bf16", "fp16"])
     ap.add_argument("--enable-thinking", action="store_true")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--resume", action="store_true",
+                    help="reuse items already present in E_<tag>_raw.jsonl and score only the rest")
     a = ap.parse_args()
     tag = a.tag or f"cosmos3edge_{a.arm}" + ("_think" if a.enable_thinking else "")
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
@@ -104,8 +142,28 @@ def main():
     model, processor, qinfo = build_model(a.model, a.arm, a.calib_samples, a.dtype)
     torch.cuda.reset_peak_memory_stats()
 
+    # Stream results to disk as they are produced, and skip ids already scored on a previous attempt.
+    # Three runs of the thinking arm were SIGKILLed near item 50 and lost ~50 completed evaluations each,
+    # because outputs were only written after the final item. Appending per item makes a kill cost the
+    # remainder rather than the whole run, and makes the arm resumable in chunks.
+    raw_path = out / f"E_{tag}_raw.jsonl"
+    done = {}
+    if a.resume and raw_path.exists():
+        for line in open(raw_path):
+            try:
+                r = json.loads(line)
+            except json.JSONDecodeError:
+                continue          # a kill mid-write can leave one truncated line
+            done[r["id"]] = r
+        if done:
+            print(f"[resume] {len(done)} items already scored in {raw_path.name}; skipping those", flush=True)
     preds, raws, tok_total, gen_s, truncated = [], [], 0, 0.0, 0
+    rawfh = open(raw_path, "a" if a.resume else "w", buffering=1)
     for k, item in enumerate(items, 1):
+        if item["id"] in done:
+            r = done[item["id"]]
+            preds.append({"id": r["id"], "normalized_answer": r["pred"]}); raws.append(r)
+            continue
         img, n_reg = render_item(a.data, item, a.max_side)
         prompt = build_prompt(item, n_reg)
         msgs = [{"role": "user", "content": [{"type": "image"}, {"type": "text", "text": prompt}]}]
@@ -129,20 +187,25 @@ def main():
         # falls back to the last number/word in the reasoning text, which is not the model's answer.
         truncated += int(ntok >= a.max_new_tokens)
         na = parse_answer(gen, item["category"])
-        preds.append({"id": item["id"], "normalized_answer": na})
-        raws.append({"id": item["id"], "category": item["category"], "image": item["image"],
-                     "gt": item["normalized_answer"], "pred": na, "raw": gen.strip()[:400]})
+        rec = {"id": item["id"], "category": item["category"], "image": item["image"],
+               "gt": item["normalized_answer"], "pred": na, "raw": gen.strip()[:400]}
+        preds.append({"id": item["id"], "normalized_answer": na}); raws.append(rec)
+        rawfh.write(json.dumps(rec) + "\n")      # line-buffered: survives a kill
         if k % 50 == 0 or k == len(items):
             print(f"  [{k}/{len(items)}] {tok_total/max(gen_s,1e-9):.1f} tok/s", flush=True)
 
     peak = torch.cuda.max_memory_allocated() / 1e9
     (out / f"E_{tag}_preds.json").write_text(json.dumps(preds))
-    with open(out / f"E_{tag}_raw.jsonl", "w") as fh:
-        for r in raws: fh.write(json.dumps(r) + "\n")
+    rawfh.close()   # already written incrementally above
     stats = {"model": a.model, "tag": tag, "arm": a.arm, "n": len(items), "categories": a.categories,
              "dtype": a.dtype, "seed": a.seed, "enable_thinking": a.enable_thinking,
-             "runtime": "transformers fake-quant (simulated INT4)" if a.arm == "int4" else "transformers",
-             "quantization_kind": "PTQ (modelopt AWQ), SIMULATED -- not engine kernels" if a.arm == "int4" else "none",
+             "runtime": {"int4": "transformers fake-quant (SIMULATED INT4)",
+                         "nf4": "transformers + bitsandbytes NF4 (REAL 4-bit kernels)",
+                         "bf16": "transformers"}[a.arm],
+             "quantization_kind": {"int4": "PTQ (modelopt AWQ), SIMULATED -- not engine kernels",
+                                   "nf4": "PTQ (bitsandbytes NF4), real kernels -- a DIFFERENT quantiser from "
+                                          "the shipped AWQ checkpoint",
+                                   "bf16": "none"}[a.arm],
              "hardware": "B300 -- NOT Orin; deployment figures come from the Jetson side",
              "tokens_generated": tok_total, "generate_seconds": round(gen_s, 1),
              "tokens_per_s": round(tok_total / max(gen_s, 1e-9), 2), "peak_gb": round(peak, 1),
@@ -150,6 +213,13 @@ def main():
              "truncated_pct": round(100 * truncated / max(len(items), 1), 2), **qinfo}
     (out / f"E_{tag}_stats.json").write_text(json.dumps(stats, indent=2))
     print(json.dumps(stats), flush=True)
+    # A model that runs to the token cap on nearly every item is looping, not answering. Scoring that produces
+    # confident nonsense -- the NF4 first attempt read as "quantisation destroyed the model" when the real
+    # cause was a config error. Flag it loudly rather than let the numbers stand.
+    if stats["truncated_pct"] > 50:
+        print(f"!! {stats['truncated_pct']}% of generations ran to the {a.max_new_tokens}-token cap. That is "
+              f"degenerate output, not an answer. These accuracies are NOT a measurement of this model.",
+              flush=True)
 
 
 if __name__ == "__main__":
