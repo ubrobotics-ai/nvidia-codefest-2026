@@ -521,3 +521,32 @@ Also documented rather than changed: the scorer scans `LABELS` order, not text o
 reply naming two actions resolves to whichever comes first in `LABELS` — unlike the production
 gate, which returns UNKNOWN. Both arms are scored by the identical rule so the comparison is
 fair, but a number here does not predict what `command_intent.py` would do with the same text.
+
+## Scored under the production gate's rule: identical
+
+Our scorer resolves a multi-action reply by `LABELS` order; `command_intent.py` returns
+UNKNOWN. The brain session pointed out that difference is **not symmetric**: on refusal items
+UNKNOWN is the correct answer, so the gate turns a multi-action reply into a hit where we
+score a miss (our refusal number would be a *floor*); on real commands the same reply becomes
+a miss where we may score a hit (our command number would be a *ceiling*). Refusal could only
+rise, commands could only fall — and the command number is the deployment-relevant one.
+
+Re-scored the v3 engine's raw outputs under the gate's rule — distinct = the seven real
+actions named, UNKNOWN excluded from the set; exactly one → that action; zero → UNKNOWN;
+two or more → UNKNOWN:
+
+| measure | our rule | gate rule |
+|---|---:|---:|
+| refusal probe (12 nonsense) | 11/12 | **11/12** |
+| real commands (6) | 6/6, 0 wrongly refused | **6/6, 0 wrongly refused** |
+| dev set (166) | 95.8% | **95.8%** |
+
+**0 disagreements across all 184 outputs. 0 replies naming two or more actions.**
+
+So neither figure was a floor or a ceiling — both are exact. The reason is mechanical rather
+than lucky, which is what makes it predictive: across the 166-item dev run there are **8
+distinct output strings, the longest 7 characters**, and none contains more than one action
+word. The two rules cannot disagree because the adapter never emits the input they disagree
+about. On the brain session's own reading, that makes the commitment gate dead weight against
+v3 — it still catches base Cosmos, but what protects a v3 deployment is the vocabulary gate
+plus the trained refusal.
