@@ -469,3 +469,55 @@ hundreds of sampled tokens to develop; this task never generates more than one.
 both honours temperature and builds INT4 correctly, so the INT4-at-0.3 measurement needs the
 brain's shim. And one real command is refused at bf16 (5/6) that the INT4 engine gets right
 (6/6), which is a bf16-vs-INT4 difference at n=6 and not worth a conclusion either way.
+
+## The refusal ceiling is not hypothetical: Gemma reaches it untrained
+
+Measured by the brain session on the same production prompt, thinking off, ten items through
+the wired path:
+
+| model | correct |
+|---|---:|
+| Gemma 4 E4B (llama.cpp, Q4_K_XL) | **10/10** |
+| Cosmos3-Edge INT4-AWQ, base | 7/10 |
+
+Gemma returns UNKNOWN on nonsense **with no fine-tune and no UNKNOWN example in the prompt**,
+and separately answers REPORT correctly for `"Report your status"`. So it makes the exact
+distinction our adapter still conflates on three items.
+
+Two things follow, and they cut in opposite directions:
+
+**It justifies the bucket.** The open question when we kept the 200 UNKNOWN examples was
+whether "cannot decline" was a property of the task framing or of this model. A 4B-class model
+reading the identical prompt declines correctly, so it is Cosmos, the behaviour is learnable,
+and 0/12 → 11/12 is closing a real gap rather than teaching a trick.
+
+**It sets a real target instead of a guess.** 10/10 is what this command path looks like with
+refusal working. Our 11/12 is near it, not at it.
+
+It also argues that the contrastive pairs matter more than rewording the REPORT line: another
+model separates the two surface shapes from this prompt unchanged, so the distinction is
+reachable without touching the description.
+
+## Why every number here is a thinking-OFF number, verified
+
+The production commitment gate returns UNKNOWN when a reply names two distinct actions. With
+thinking ON, reasoning and answer arrive undivided in the text, so a model reasoning aloud
+over two candidates parses as two actions and is scored UNKNOWN — which would penalise
+whichever arm reasons more and inflate the delta.
+
+Checked directly rather than assumed:
+
+| call | prompt tail | thinking |
+|---|---|---|
+| `enable_thinking=False` | `<think></think>` | **off** |
+| `enable_thinking=True` | `<think>\n` | on |
+| flag omitted | `<think>\n` | **on** |
+
+The flag is accepted, so all runs are thinking-off. But both scripts had
+`except TypeError: <retry without the flag>`, which would have **silently enabled thinking**
+had the template ever rejected it. That fallback now aborts instead.
+
+Also documented rather than changed: the scorer scans `LABELS` order, not text order, so a
+reply naming two actions resolves to whichever comes first in `LABELS` — unlike the production
+gate, which returns UNKNOWN. Both arms are scored by the identical rule so the comparison is
+fair, but a number here does not predict what `command_intent.py` would do with the same text.

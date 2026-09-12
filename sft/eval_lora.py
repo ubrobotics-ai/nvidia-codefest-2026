@@ -40,14 +40,24 @@ def main():
         try:
             p = proc.apply_chat_template(msgs, add_generation_prompt=True, tokenize=False,
                                          enable_thinking=False)
-        except TypeError:
-            p = proc.apply_chat_template(msgs, add_generation_prompt=True, tokenize=False)
+        except TypeError as ex:
+            # Do NOT silently fall back. Without enable_thinking the template emits
+            # "<think>\n" instead of "<think></think>", i.e. thinking ON -- and every number
+            # here is a thinking-off number. A reply that reasons aloud over two candidate
+            # actions also trips the production commitment gate into UNKNOWN, so a silent
+            # flip would penalise whichever arm reasoned more and inflate the delta.
+            raise SystemExit(f"chat template rejected enable_thinking, refusing to guess: {ex}")
         enc = tok(p, return_tensors="pt").to("cuda")
         with torch.no_grad():
             o = model.generate(**enc, max_new_tokens=a.max_new, do_sample=False)
         txt = tok.decode(o[0][enc["input_ids"].shape[1]:], skip_special_tokens=True)
         up = txt.strip().upper()
-        for L in LABELS:                       # first label mentioned wins
+        # NOTE: this scans LABELS order, not text order, so a reply naming two actions
+        # resolves to whichever appears earlier in LABELS. That differs from the production
+        # commitment gate, which returns UNKNOWN when two distinct actions are named. Both
+        # arms are scored by this identical rule, so the comparison is fair, but a number
+        # here is not a prediction of what command_intent.py would do with the same text.
+        for L in LABELS:
             if up.startswith(L): return L, txt.strip()
         for L in LABELS:
             if L in up: return L, txt.strip()

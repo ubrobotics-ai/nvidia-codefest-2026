@@ -106,8 +106,11 @@ def main():
             try:
                 p = proc.apply_chat_template(msgs, add_generation_prompt=True, tokenize=False,
                                              enable_thinking=False)
-            except TypeError:
-                p = proc.apply_chat_template(msgs, add_generation_prompt=True, tokenize=False)
+            except TypeError as ex:
+                # Never fall back silently: without enable_thinking the template emits
+                # "<think>\n" (thinking ON) instead of "<think></think>", so training would
+                # run under a different prompt than the evaluation and than production.
+                raise SystemExit(f"chat template rejected enable_thinking, refusing to guess: {ex}")
             texts.append(p); labels.append(r["label"])
         full = [t + l + tok.eos_token for t, l in zip(texts, labels)]
         enc = tok(full, return_tensors="pt", padding=True, truncation=True, max_length=512)
