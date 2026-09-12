@@ -371,3 +371,57 @@ halls, warehouses, offices and hospitals — 85 room, 65 open_area, nothing else
 `train_lora.py` is text-only. This bucket is image-conditioned, so the trainer needs a
 multimodal path — feeding pixels through the processor and masking loss to the JSON — before
 any of it can be used. That is the next piece of work, not a finished artefact.
+
+## v3 — retrained under the production prompt, and the gate clears
+
+`sft/prompt.py` now holds the production command prompt verbatim (`brain/prompts.py:74-96`),
+imported by both trainer and evaluator, including the `Operator: "…"  Action:` user shape.
+Plus contrastive REPORT/UNKNOWN pairs, and all 12 refusal probes moved into `HOLDOUT`.
+
+### The placeholder prompt was costing 16 points, to the base model
+
+| arm | overall | UNKNOWN |
+|---|---:|---:|
+| base, placeholder prompt | 51.4% | 40.8% |
+| base, **production** prompt | **67.5%** | **10.8%** |
+| v3 LoRA, production prompt | **97.0%** | **89.2%** |
+
+Every number before this was measured against a strawman prompt. Note the direction of the
+UNKNOWN column: the production prompt makes the base **worse** at refusing — 40.8% → 10.8% —
+which is not a defect but the direct consequence of eight actions, worked examples, and
+deliberately no UNKNOWN example. The better the prompt gets at the seven real actions, the
+harder it pushes toward picking one, and the fine-tune is the only thing that recovers
+refusal. It corroborates the brain session's independent 0/12.
+
+### Refusal probe, this time genuinely held out
+
+| | base | v2 | v3 |
+|---|---:|---:|---:|
+| UNKNOWN on nonsense | 0/12 | 9/12 (6 items trained on) | **11/12 (0 trained on)** |
+| real commands | 6/6 | 6/6 | 6/6 |
+| wrongly refused | 0/6 | 0/6 | **0/6** |
+
+`"Who won the world cup"` and `"Translate this to German"` both flipped to UNKNOWN — the two
+the contrastive pairs targeted. The single remaining miss is `"What time is it"` → REPORT,
+which is genuinely ambiguous for a robot carrying a clock.
+
+Dev set through the INT4 engine: **95.8%** (97.0% at bf16).
+
+### The L0 gate
+
+| arm | k | distance | left_right | mcq | far [12,+) |
+|---|---:|---:|---:|---:|---:|
+| INT4 base | 1.2148 | 36.21% | 64.00% | 16.45% | 39.3% |
+| INT4 v2 | 1.2234 | 30.45% | 64.40% | 17.76% | **23.0%** |
+| **INT4 v3** | 1.2154 | **34.57%** | 66.00% | 16.67% | **37.7%** |
+
+Paired against base, v3 is flat everywhere: distance p = 0.428, left_right p = 0.143,
+mcq p = 1.0. `k` returns to the base's value.
+
+**What this does NOT establish.** v2 and v3 differ in several ways at once — production prompt,
+contrastive pairs, a different seed-disjoint split, 270 steps against 264 — so the recovery
+cannot be attributed to any one of them, and "v2 regressed, v3 did not" is **not a test of the
+difference between them**. Two adapters, one draw each. The v2 regression could have been
+run-to-run variance in which weights the LoRA moved, and a third seed is what would separate
+those. Until then the honest claim is narrow: **this build clears the gate**, not "the problem
+is solved".

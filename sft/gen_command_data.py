@@ -27,6 +27,13 @@ HOLDOUT = {s.lower() for s in [
     "turn to starboard", "withdraw", "go forward", "proceed", "continue onward",
     "sing me a song", "stop!", "stop right now", "freeze!", "halt immediately",
     "don't move", "drive forward",
+    # The refusal probe. Measured base 0/12 vs SFT 9/12, but six of the twelve turned out to
+    # be trained on, which cost half the probe's value. Held out from here on so the number
+    # means something next time.
+    "tell me a joke", "what time is it", "translate this to german", "set an alarm for 7am",
+    "play some music", "what's 17 plus 25", "what is 17 plus 25", "make me a sandwich",
+    "what is the capital of france", "who won the world cup", "how much do you weigh",
+    "write me a poem about rubble",
 ]}
 
 FORWARD = ["move ahead", "advance", "head on", "keep going", "press on", "move up",
@@ -47,12 +54,31 @@ STOP = ["stop", "halt", "hold", "hold position", "stand by", "cease", "pause",
 SEARCH = ["look for a person", "search the room", "find anyone down", "scan the area",
     "sweep for casualties", "look around", "search ahead", "check the space"]
 REPORT = ["report", "what do you see", "status", "tell me what you found",
-    "give me an update", "describe the scene", "what's there"]
+    "give me an update", "describe the scene", "what's there",
+    # CONTRASTIVE HALF. All three residual refusal failures were questions answered with
+    # REPORT, and two of them were in the training set already -- so this is not a coverage
+    # gap that more volume closes. "REPORT: say the current status out loud" reads as "answer
+    # any question", and the only thing that separates the two classes is WHOSE state is
+    # being asked about. These are question-shaped and about the ROBOT; the UNKNOWN list
+    # below carries the same shapes about the WORLD.
+    "where are you", "which way are you facing", "what's your heading", "are you moving",
+    "how far have you come", "what's behind you", "are you stuck", "what's your battery",
+    "how much charge is left", "what can you see right now", "is anyone in front of you",
+    "what are you doing", "how long have you been running", "what's your position"]
 UNKNOWN = ["sing something", "what's the weather", "tell me a joke", "who are you",
     "make coffee", "what time is it", "play some music", "how old are you",
     "recite a poem", "what's your favourite colour", "order a pizza", "call my mother",
     "solve this equation", "translate this", "book a flight", "set an alarm",
-    "what's 17 plus 25", "do a backflip", "open the pod bay doors", "read me the news"]
+    "do a backflip", "open the pod bay doors", "read me the news",
+    # CONTRASTIVE HALF: same question shapes as the REPORT list, about the world instead of
+    # the robot. "where are you" -> REPORT and "where is Lisbon" -> UNKNOWN differ in subject,
+    # not in form, which is the distinction the model is currently not making.
+    "where is lisbon", "which way is north from here in degrees of longitude",
+    "what's the tallest mountain", "who is the president", "how far is the moon",
+    "what's the population of berlin", "when did the war end", "how many bones are in a body",
+    "what's the speed of light", "who wrote hamlet", "what's the boiling point of water",
+    "how many continents are there", "what language do they speak in brazil",
+    "what's the biggest planet"]
 
 MODS = ["", "please ", "can you ", "now ", "quickly ", "robot, ", "okay ", "right, "]
 SUFF = ["", " please", " now", " right away", "!", ".", " immediately"]

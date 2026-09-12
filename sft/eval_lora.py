@@ -6,11 +6,9 @@ Phase 6 gate: the real command set (15 items), the tool set (10) and the grounde
 benchmark (24 frames) live on the robot. Treat a win here as necessary, not sufficient.
 """
 import argparse, json, os, sys, torch
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-PROMPT = ("You control a ground robot. Map the operator's instruction to exactly one "
-          "action: FORWARD, BACK, LEFT, RIGHT, STOP, SEARCH, REPORT, or UNKNOWN. "
-          "Answer UNKNOWN if the instruction is not one of these actions. "
-          "Reply with the action word only.")
+from prompt import SYSTEM as PROMPT, user_turn  # production prompt, brain/prompts.py:74-96
 LABELS = ["FORWARD","BACK","LEFT","RIGHT","STOP","SEARCH","REPORT","UNKNOWN"]
 
 def main():
@@ -38,7 +36,7 @@ def main():
 
     def predict(instr):
         msgs = [{"role":"system","content":[{"type":"text","text":PROMPT}]},
-                {"role":"user","content":[{"type":"text","text":instr}]}]
+                {"role":"user","content":[{"type":"text","text":user_turn(instr)}]}]
         try:
             p = proc.apply_chat_template(msgs, add_generation_prompt=True, tokenize=False,
                                          enable_thinking=False)

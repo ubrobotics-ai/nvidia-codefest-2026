@@ -13,12 +13,10 @@ before any run whose numbers are meant to transfer. Training under one prompt an
 under another measures nothing useful.
 """
 import argparse, json, os, random, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import torch
 
-PROMPT = ("You control a ground robot. Map the operator's instruction to exactly one "
-          "action: FORWARD, BACK, LEFT, RIGHT, STOP, SEARCH, REPORT, or UNKNOWN. "
-          "Answer UNKNOWN if the instruction is not one of these actions. "
-          "Reply with the action word only.")
+from prompt import SYSTEM as PROMPT, user_turn  # production prompt, brain/prompts.py:74-96
 
 def main():
     ap = argparse.ArgumentParser()
@@ -104,7 +102,7 @@ def main():
         texts, labels = [], []
         for r in batch:
             msgs = [{"role":"system","content":[{"type":"text","text":PROMPT}]},
-                    {"role":"user","content":[{"type":"text","text":r["instruction"]}]}]
+                    {"role":"user","content":[{"type":"text","text":user_turn(r["instruction"])}]}]
             try:
                 p = proc.apply_chat_template(msgs, add_generation_prompt=True, tokenize=False,
                                              enable_thinking=False)
