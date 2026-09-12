@@ -425,3 +425,47 @@ difference between them**. Two adapters, one draw each. The v2 regression could 
 run-to-run variance in which weights the LoRA moved, and a third seed is what would separate
 those. Until then the honest claim is narrow: **this build clears the gate**, not "the problem
 is solved".
+
+## Sampling: the bench was greedy, production is not
+
+`llm_inference` **silently ignores** `temperature`, `top_p` and `top_k` in its input JSON.
+The two mentions of `temperature` in `examples/llm/llm_inference.cpp` are both comments
+telling you to put it there; nothing assigns `request.temperature`. The runtime supports
+sampling (`shouldUseNonGreedySampling`, `SamplingParams`) — only the example driver is
+missing the parse. Filed as **NVIDIA/TensorRT-Edge-LLM#211**.
+
+Confirmed by measurement, not by reading: the same open-ended prompt at `temperature` 0.0 and
+0.3, three runs each, produced **one distinct output across all six**.
+
+So every engine number in this file is a **greedy** number, while the brain runs
+`llm.temperature: 0.3`. That gap has teeth — the sim session measured this engine entering a
+non-terminating repetition loop at 0.3 on open-ended generation that greedy never enters, and
+raising the budget 250 → 512 → 2048 extended the loop (24 → 83 → 424 steps) without moving
+the first incoherent step past 12.
+
+`experimental.server.LLM` does honour temperature, but it is the checkpoint-direct builder —
+the path that produces numerically wrong INT4 output (#208) — so it cannot give a valid
+sampled INT4 measurement either.
+
+### What could be measured: the merged bf16 model under real sampling
+
+| arm | dev (166) | differs from greedy |
+|---|---:|---:|
+| bf16 merged, greedy | 97.0% | — |
+| bf16 merged, temp 0.3, seed 1 | 97.0% | **0** |
+| bf16 merged, temp 0.3, seed 2 | 97.0% | **0** |
+| bf16 merged, temp 0.3, seed 3 | 97.0% | **0** |
+
+**0 of 166 items unstable across the three sampled runs**, and not one differs from greedy.
+The refusal probe is identical at every temperature too (12/12 nonsense at bf16), with 0
+wrongly-refused real commands.
+
+That is what a peaked distribution looks like: training loss settles near 1e-4, the answer is
+a single token from an eight-word vocabulary with `max_new_tokens` 8, and `temperature` 0.3
+is nowhere near enough to move the argmax. The open-ended looping the sim session found needs
+hundreds of sampled tokens to develop; this task never generates more than one.
+
+**Limits, stated.** This is the **bf16 merged** model, not the INT4 engine — no local runtime
+both honours temperature and builds INT4 correctly, so the INT4-at-0.3 measurement needs the
+brain's shim. And one real command is refused at bf16 (5/6) that the INT4 engine gets right
+(6/6), which is a bf16-vs-INT4 difference at n=6 and not worth a conclusion either way.
