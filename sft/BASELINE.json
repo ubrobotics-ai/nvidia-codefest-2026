@@ -25,7 +25,11 @@
   },
   "gates_L0": {
     "instrument": "scripts/l0_trt_eval.py + scripts/l0_report.py, 1,442 items",
-    "distance_pct": 18.52,
+    "distance_pct": {
+      "value": 18.52,
+      "calibration": "k=1",
+      "see": "gates_L0.calibration"
+    },
     "left_right_pct": 64.0,
     "mcq_pct": 16.45,
     "task_mean_d_lr": 41.26,
@@ -41,7 +45,18 @@
       "left_right": 0.724,
       "mcq": 0.451
     },
-    "left_right_order_invariance_pct": 65.6
+    "left_right_order_invariance_pct": 65.6,
+    "calibration": {
+      "note": "Every distance number below is stated WITH its calibration. The original freeze gave distance_pct=18.52 without saying it was k=1, and the Phase 6 re-measure then produced three defensible verdicts (SFT better at k=1, worse at global k, worse-but-not-significant at per-bucket k) with no way to tell which one the gate meant. A distance gate is meaningless without its k.",
+      "distance_pct_at_k1": 18.52,
+      "distance_pct_at_global_k": 36.21,
+      "distance_pct_at_per_bucket_k_heldout": 37.24,
+      "gate_basis": "distance_pct_at_global_k",
+      "gate_basis_reason": "Global k is what a deployment ships: one constant, fitted once, applied to every reading. k=1 measures an uncalibrated model nobody deploys, and per-bucket k needs the ground-truth range to pick the bucket, which at inference is the unknown being estimated.",
+      "k_estimator": "split-half median of gt/pred on even/odd positions of the id-sorted distance items; halves scored with the other half's k",
+      "scoring_rule": "correct iff 0.90*gt <= pred*k <= 1.10*gt",
+      "k_must_be_refitted_per_arm": true
+    }
   },
   "gates_L1": {
     "source": "REPORT_L1.md, Jetson Orin Nano 8GB",
@@ -51,7 +66,8 @@
     "commands": "13/15, stops 5/5 (thinking off)",
     "tools_correct_arguments": "1 of 10",
     "decode_tok_s": 52.8,
-    "engines_gib": 2.24
+    "engines_gib": 2.24,
+    "caveat_tolerant_entities": "Label-fidelity numbers computed before the 2026-09-12 fix to tolerant_entities() are measuring the parser, not the model: it lost the label of every entity after the first, 100% of the time (the tail span ran to the next 'bbox_2d', so later head spans were empty and fell back to 'object'). Re-measure before citing them."
   },
   "holdout_never_train": [
     "the 24-item grounded benchmark",
