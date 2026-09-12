@@ -209,7 +209,56 @@ MCQ. Whether it fails depends on which calibration ships, and `BASELINE.json` do
 — **the gate should have specified its calibration, and it did not.** That is a defect in
 the baseline, not a result.
 
-Not established: whether the far-bucket loss is the LoRA or re-quantisation noise. That needs
-a bf16-merged arm through the same 1,442 items, which has not been run. Until it is, the
-honest statement is that distance regressed on the deployable calibration and the cause is
-not isolated.
+### The control: neither factor alone accounts for it
+
+The bf16-merged arm has now been run, plus a fresh bf16 base arm — both re-run in this
+session's environment, because a `peft` install put torch 2.13 in `~/.local` and shadowed the
+container's 2.8, so the frozen bf16 arm was no longer a safe comparator.
+
+| arm | k | distance | left_right | mcq |
+|---|---:|---:|---:|---:|
+| bf16 base | 1.1546 | 36.63% | 64.80% | 17.76% |
+| bf16 merged | 1.1408 | 34.36% | 64.40% | 17.76% |
+| INT4 base | 1.2148 | 36.21% | 64.00% | 16.45% |
+| INT4 merged | 1.2234 | **30.45%** | 64.40% | 17.76% |
+
+Paired on distance:
+
+| contrast | b | c | p |
+|---|---:|---:|---:|
+| LoRA at bf16 (bf16 base → bf16 merged) | 31 | 20 | 0.161 |
+| **LoRA at INT4** (INT4 base → INT4 merged) | 52 | 24 | **0.0018** |
+| quantisation without LoRA (bf16 base → INT4 base) | 68 | 66 | 0.931 |
+| quantisation with LoRA (bf16 merged → INT4 merged) | 78 | 59 | 0.124 |
+
+**Neither factor alone is significant; only the combination is.** The far bucket makes it
+plain — three cells sit together and the fourth falls off:
+
+| arm | [12,+) accuracy |
+|---|---:|
+| bf16 base | 41.0% |
+| bf16 merged | 37.7% |
+| INT4 base | 39.3% |
+| **INT4 merged** | **23.0%** |
+
+Two cautions on reading that. The two LoRA contrasts point the same way and differ mainly in
+magnitude, and **the interaction itself has not been tested** — "significant here, not there"
+is not a test of the difference between them. And left_right is flat in every cell
+(p = 0.860 at bf16, p = 0.824 at INT4), so whatever this is, it is specific to numeric
+distance.
+
+### The mechanism is not established
+
+The obvious hypothesis — merged weights quantise worse — **does not survive measurement.**
+Relative AWQ reconstruction error over 30 modules across 5 layers:
+
+| weights | mean relative error |
+|---|---:|
+| base | 0.14901 |
+| merged | 0.14677 (−1.51%) |
+
+Merged is worse in 22 of 30 modules, but by so little that the mean moves the other way. At
+the weight level the merged checkpoint quantises **just as well** as the base. So the
+weight-space explanation is out, and the remaining candidates — AWQ scales fitted against
+calibration *activations*, or the far bucket simply being the noisiest 122 items in the set —
+are untested. Recorded as unexplained rather than guessed at.
