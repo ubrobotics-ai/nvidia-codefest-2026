@@ -262,3 +262,56 @@ the weight level the merged checkpoint quantises **just as well** as the base. S
 weight-space explanation is out, and the remaining candidates — AWQ scales fitted against
 calibration *activations*, or the far bucket simply being the noisiest 122 items in the set —
 are untested. Recorded as unexplained rather than guessed at.
+
+
+## UNKNOWN on held-out nonsense — the hole the code cannot close
+
+The brain session's `command_intent.py` gates two things in code: replies outside the
+eight-word vocabulary, and replies naming two distinct actions. Neither can catch **a
+confident, well-formed, single, wrong vocabulary word** — nothing downstream tells that from
+a right one, and one measured case (`"What is the capital of France"` → SEARCH) sets off a
+full 9-look, 8-turn sweep.
+
+Both engines, production prompt from `prompts.py`, thinking off:
+
+| utterance | base | SFT |
+|---|---|---|
+| Sing me a song | SEARCH | **UNKNOWN** |
+| What is the capital of France | REPORT | **UNKNOWN** |
+| Make me a sandwich | SEARCH | **UNKNOWN** |
+| Tell me a joke | SEARCH | **UNKNOWN** |
+| What time is it | REPORT | REPORT |
+| Who won the world cup | REPORT | REPORT |
+| Translate this to German | REPORT | REPORT |
+| Set an alarm for 7am | STOP | **UNKNOWN** |
+| How much do you weigh | REPORT | **UNKNOWN** |
+| Write me a poem about rubble | SEARCH | **UNKNOWN** |
+| What is 17 plus 25 | REPORT | **UNKNOWN** |
+| Play some music | STOP | **UNKNOWN** |
+
+**Base 0/12. SFT 9/12.**
+
+Six of those twelve turned out to be in the training data — this probe was written by hand,
+not drawn from the held-out split, so it has to be split before it means anything:
+
+| subset | n | base | SFT |
+|---|---:|---:|---:|
+| **unseen** | 6 | 0 | **5 (83%)** |
+| seen in training | 6 | 0 | 4 (67%) |
+
+The held-out half scores *higher* than the trained half, which is the opposite of a
+memorisation artefact — at n = 6 per cell that is not a result, but it does mean the effect
+is not contamination.
+
+Two of the three residual failures (`"What time is it"`, `"Translate this to German"`) were
+**in the training set and still fail**, so this is not a coverage gap that more of the same
+data fixes. All three failures share one shape: an information request answered with REPORT.
+REPORT is "say the current status", and the model reads any question as a status request.
+That is the specific next target, and it needs contrastive pairs — question-shaped nonsense
+against question-shaped genuine status requests — not more volume.
+
+No over-refusal: six real commands, phrased unlike anything trained
+(`"Kill power to the wheels"`, `"Push on ahead"`, `"Swing to the left"`, `"Where are you
+right now"`, `"Sweep the area"`, `"Reverse out of there"`) score **6/6 on both engines**, and
+the SFT wrongly refused **0 of 6**. The refusal behaviour did not come at the cost of the
+commands.
