@@ -550,3 +550,62 @@ word. The two rules cannot disagree because the adapter never emits the input th
 about. On the brain session's own reading, that makes the commitment gate dead weight against
 v3 — it still catches base Cosmos, but what protects a v3 deployment is the vocabulary gate
 plus the trained refusal.
+
+## The third seed: v2's regression does not reproduce
+
+Seed 1, same v3 configuration (production prompt, contrastive pairs), independent
+seed-disjoint split — 729 rows / 107 seeds train, 161 rows / 26 seeds dev.
+
+| arm | overall | UNKNOWN |
+|---|---:|---:|
+| base | 67.7% | 15.0% |
+| **seed 1 + LoRA** | **97.5%** | **90.0%** |
+
+Consistent with seed 0's 67.5% → 97.0% and 10.8% → 89.2%.
+
+### The L0 gate, all four arms
+
+| arm | k | distance | left_right | mcq | far [12,+) |
+|---|---:|---:|---:|---:|---:|
+| INT4 base | 1.2148 | 36.21% | 64.00% | 16.45% | 39.3% |
+| v2, placeholder prompt | 1.2234 | **30.45%** | 64.40% | 17.76% | **23.0%** |
+| v3, production, seed 0 | 1.2154 | 34.57% | 66.00% | 16.67% | 37.7% |
+| **v4, production, seed 1** | 1.2109 | **36.42%** | **67.60%** | 17.54% | **45.9%** |
+
+Paired against base:
+
+| arm | distance | left_right | mcq |
+|---|---|---|---|
+| v2 | **p = 0.0018** | p = 0.824 | p = 0.362 |
+| v3 | p = 0.428 | p = 0.143 | p = 1.0 |
+| v4 | **p = 1.0** | **p = 0.0021** | p = 0.383 |
+
+**Distance: v2's regression does not reproduce.** Two independent seeds of the production
+configuration are both flat (p = 0.428, p = 1.0), and seed 1's far bucket is *above* base
+(45.9% vs 39.3%). The most economical reading is that v2's p = 0.0018 was either seed variance
+in which directions the LoRA moved, or specific to the placeholder-prompt configuration. Still
+not attributed — two seeds of one configuration tests stability, not causation — but the
+unshippable finding is no longer standing.
+
+### left_right improved, and the swap probe says only a third of it is real
+
+Seed 1 raises left_right 64.00% → 67.60%, p = 0.0021. That survives Bonferroni over the nine
+tests in the table above (0.05/9 = 0.0056). But L0 established this category carries a
+positional prior, so the order-swap probe is the test that matters — the same two `<mask>`
+substitutions swapped, so the mirrored question inverts the expected answer:
+
+| | base | v4 seed 1 |
+|---|---:|---:|
+| raw accuracy | 64.00% | 67.60% |
+| order-invariant (answers the same either way) | 65.6% | 62.4% |
+| **order-debiased accuracy** | **50.80%** | **52.20%** |
+| accuracy on the order-consistent subset | 70.35% | 73.94% |
+
+The prior did weaken slightly — 37.6% of items now flip correctly against 34.4% — so this is
+not purely a prior shift. But **the debiased gain is +1.40 points, not +3.60.** Roughly a
+third of the headline improvement survives debiasing; the rest is the model still answering
+from position on 62% of items.
+
+So the honest claim is narrow: a text-only command LoRA did not damage spatial left/right and
+may have improved it by about a point and a half on the measure that controls for the prior.
+Anyone quoting +3.6 points is quoting an artefact of the prior.
