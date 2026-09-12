@@ -51,7 +51,10 @@ def main():
     reqs = []
     for item in items:
         p = img_dir / f"{item['id']}.png"
-        if not p.exists():
+        # Size, not just existence: a run killed mid-render leaves a zero-byte PNG that
+        # this skipped on the next pass, and llm_inference then died 450 items in with
+        # 'Failed to load image'.
+        if not p.exists() or p.stat().st_size == 0:
             img, n_reg = render_item(a.data, item, a.max_side)
             img.save(p)
         else:

@@ -160,8 +160,56 @@ merged tensor differs from the base on disk.
 **None of the green lights in this pipeline distinguish "the adapter is in the engine" from
 "the adapter is not in the engine."** Only a checkpoint diff and a held-out score do.
 
-### Still not done
+## Phase 6 — the L0 gates against this engine
 
-The `BASELINE.json` L0 gates have not been re-run against this engine — 1,442 spatial-QA
-items, and `k` needs re-fitting because AWQ scales were re-fitted on all 168 changed tensors.
-Command accuracy surviving INT4 says nothing about whether spatial QA did.
+All 1,442 spatial-QA items through the SFT engine, 0 empty generations, 136 s. `k` re-fitted
+per arm rather than carried over, since AWQ scales moved on all 168 changed tensors. It
+barely moved: **1.2148 → 1.2234, +0.71%**.
+
+| category | n | baseline | SFT engine | exact McNemar |
+|---|---:|---:|---:|---|
+| distance (global k) | 486 | 36.21% | **30.45%** | b=52 c=24 **p=0.0018** |
+| left_right | 500 | 64.00% | 64.40% | b=9 c=11 p=0.824 |
+| mcq | 456 | 16.45% | 17.76% | b=12 c=18 p=0.362 |
+
+**`left_right` and `mcq` did not move.** The interference worth worrying about — the LoRA
+trained LEFT/RIGHT hard as command labels, and spatial left/right shares the attention path
+— did not materialise.
+
+### Distance moved, and the verdict depends on the calibration
+
+Three defensible scorings disagree, so all three are here:
+
+| scoring | baseline | SFT | verdict |
+|---|---:|---:|---|
+| **k = 1** (the basis `BASELINE.json`'s 18.52% uses) | 18.52% | **23.87%** | SFT **better**, gate passes |
+| **global k**, re-fitted per arm | 36.21% | **30.45%** | SFT worse, **p = 0.0018** |
+| **per-bucket k**, fitted split-half, scored held out | 37.24% | **33.95%** | SFT worse, p = 0.097 |
+
+The regression is real but concentrated, and it is a *spread* problem rather than a *scale*
+problem: median(SFT pred / baseline pred) = **1.0000**, and the two arms emit an identical
+number on 172 of 486 items. Nothing shifted systematically; the far bucket got noisier.
+
+| bucket | n | baseline | SFT |
+|---|---:|---:|---:|
+| [0,4) | 147 | 19.0% | 21.9% |
+| [4,8) | 108 | 36.1% | 29.6% |
+| [8,12) | 108 | 55.6% | 50.0% |
+| **[12,+)** | 122 | **39.3%** | **23.0%** |
+
+Near distances improved; **the far bucket lost 16.3 points**, and that single bucket is what
+drags the global-k number down. That is why k=1 and calibrated k disagree: the SFT's raw
+answers need slightly less correction, but they fit one global constant worse.
+
+### What this means
+
+A text-only command LoRA on `q,k,v,o,fc1,fc2` **did** reach numeric distance estimation,
+which is the risk that justified running this gate at all. It did not touch left/right or
+MCQ. Whether it fails depends on which calibration ships, and `BASELINE.json` does not say
+— **the gate should have specified its calibration, and it did not.** That is a defect in
+the baseline, not a result.
+
+Not established: whether the far-bucket loss is the LoRA or re-quantisation noise. That needs
+a bf16-merged arm through the same 1,442 items, which has not been run. Until it is, the
+honest statement is that distance regressed on the deployable calibration and the cause is
+not isolated.
