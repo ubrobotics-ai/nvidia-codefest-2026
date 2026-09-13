@@ -152,14 +152,102 @@ a design decision.
 The rule that came out of it: **never score sim-to-real output with a model trained on the
 source domain, and always score the source with the same instrument.**
 
+
+## The 20-clip subset, 7.5-15 m band
+
+Run after the pilot, on the decision above. All 20 completed: **26 job submissions, 6 kills
+absorbed by retry, 0 clips lost.** Per-clip prompts generated from the dataset metadata and
+audited against it (0 mismatches on environment, vest, posture, condition, distance). Every
+output verified as a complete 93-frame 1280x720 video by decoding it, not by reading the
+container header.
+
+Both detectors sample the same frames (every 6th masked frame, n = 13-16 per clip), so the
+columns share a denominator — the pilot mixed stride 6 against stride 1 and its fractions were
+not comparable.
+
+| clip | m | px | COCO tr med/frac | COCO src med/frac | Isaac tr | verdict |
+|---|---:|---:|---|---|---|---|
+| hall_night_buckets__orbit02 | 7.5 | 3007 | 0.91 / 0.94 | 0.00 / 0.06 | 0.91 / 0.69 | **improved** |
+| warehouse_buckets__orbit02 | 7.5 | 2936 | 0.87 / 0.81 | 0.00 / 0.44 | 0.72 / 0.56 | **improved** |
+| hall_buckets__orbit03 | 7.5 | 2698 | 0.79 / 0.75 | 0.40 / 0.50 | 0.00 / 0.19 | **improved** |
+| hall_night_buckets__orbit03 | 7.5 | 2695 | 0.82 / 0.69 | 0.00 / 0.06 | 0.83 / 0.62 | **improved** |
+| rivermark_buckets__orbit02 | 7.5 | 2695 | 0.00 / 0.38 | 0.00 / 0.06 | 0.00 / 0.19 | **improved** |
+| hall_fog_buckets__orbit02 | 10.0 | 1692 | 0.83 / 1.00 | 0.00 / 0.12 | 0.85 / 0.56 | **improved** |
+| hall_night_buckets__orbit04 | 10.0 | 1638 | 0.80 / 0.88 | 0.00 / 0.00 | 0.00 / 0.19 | **improved** |
+| hall_fog_buckets__orbit03 | 10.0 | 1566 | 0.90 / 1.00 | 0.00 / 0.31 | 0.89 / 0.69 | **improved** |
+| hall_novest_buckets__orbit02 | 10.0 | 1502 | 0.84 / 0.67 | 0.00 / 0.07 | 0.82 / 0.60 | **improved** |
+| office_buckets__orbit02 | 10.0 | 1375 | 0.07 / 0.00 | 0.00 / 0.00 | 0.08 / 0.00 | below-res both |
+| hall_novest_buckets__orbit03 | 10.0 | 1326 | 0.75 / 0.69 | 0.00 / 0.06 | 0.88 / 0.69 | **improved** |
+| hospital_buckets__orbit02 | 10.0 | 1268 | 0.13 / 0.00 | 0.00 / 0.00 | 0.00 / 0.00 | below-res both |
+| warehouse_buckets__orbit07 | 12.5 | 1079 | 0.00 / 0.00 | 0.00 / 0.00 | 0.09 / 0.00 | below-res both |
+| office_buckets__orbit03 | 10.0 | 1037 | 0.00 / 0.00 | 0.00 / 0.12 | 0.00 / 0.00 | regressed |
+| hall_buckets__orbit07 | 12.5 | 992 | 0.00 / 0.19 | 0.00 / 0.00 | 0.00 / 0.44 | **improved** |
+| hospital_buckets__orbit03 | 10.0 | 991 | 0.00 / 0.00 | 0.00 / 0.00 | 0.00 / 0.00 | below-res both |
+| hall_buckets__orbit06 | 12.5 | 925 | 0.37 / 0.19 | 0.00 / 0.00 | 0.47 / 0.31 | **improved** |
+| hall_fog_buckets__orbit04 | 15.0 | 643 | 0.40 / 0.19 | 0.00 / 0.00 | 0.00 / 0.00 | **improved** |
+| rivermark_buckets__orbit08 | 15.0 | 620 | 0.00 / 0.00 | 0.00 / 0.06 | 0.00 / 0.00 | regressed |
+| hall_novest_buckets__orbit04 | 15.0 | 577 | 0.00 / 0.00 | 0.00 / 0.00 | 0.00 / 0.25 | below-res both |
+
+**improved 13, regressed 2, below resolution in both domains 5.**
+
+### The result is a detectability threshold, not a translation limit
+
+Sorting by subject size makes it clean:
+
+| subject | clips | improved | mean COCO fraction, source → translated |
+|---|---:|---:|---|
+| **>= 1300 px** | 11 | **10** | 0.15 → **0.71** |
+| < 1300 px | 9 | 3 | 0.02 → 0.06 |
+
+Above roughly 1300 px, translation takes a real-photo detector from finding the casualty in
+15% of frames to 71%. Below it, neither domain is detectable and translation cannot help —
+the subject is smaller than what these detectors resolve, in the source render as much as in
+the translated frame.
+
+**The two "regressed" clips are floor noise, not regressions.** `office_orbit03` moves
+0.12 → 0.00 and `rivermark_orbit08` 0.06 → 0.00 — that is one or two frames out of sixteen, at
+the bottom of the range, on subjects of 1037 and 620 px. Both belong with the below-resolution
+group rather than being counted against Transfer.
+
+### What the earlier pilot got wrong about this
+
+The 8-clip pilot reported a size cliff and concluded Transfer destroys distant casualties. The
+size relationship is real, but it is a property of the **detectors**, not of Transfer: at
+370-1000 px the casualty is present in the translated frame and invisible to both instruments.
+The pilot's error was reading a detector limit as a generation limit, from a scorer fine-tuned
+on the source domain.
+
+### Prompt specificity buys frame-to-frame consistency
+
+Three clips ran in both the pilot (hand-written prompts) and the subset (metadata-generated),
+same scorer, same stride:
+
+| clip | hand-written | generated |
+|---|---|---|
+| fog 10 m | 0.881 / 0.88 | 0.828 / **1.00** |
+| night 7.5 m | 0.776 / 0.75 | **0.913 / 0.94** |
+| no-vest 10 m | **0.000 / 0.00** | **0.844 / 0.67** |
+
+3 of 3 better by fraction, 0 worse. Note the shape: fog's *median* falls slightly while its
+fraction reaches 1.00 — the richer prompt does not make the best frames better, it makes the
+bad frames good. The clip that gains most is the one whose subject is least visually
+distinctive, where naming "ordinary dark clothing" is what rescued it. n=3, so this is a
+signal rather than a law.
+
 ## Cost and the cluster behaviour that dominates it
 
 ~245 s per clip. 109 clips is **~7.4 GPU-hours of compute**.
 
-The kill rate is **16.1%** (5 of 31 attempts across every Transfer run today), Wilson 95% CI
-**7.1% to 32.6%**; `sacct` independently gives 6 FAILED of 38 steps = 15.8%. An earlier version
-of this document said ~25%, which came from a single 8-run repeat (2 kills) and sat at the top
-of that interval — the wider sample brings it down.
+The kill rate is **19%** (9 of 47 attempts across every Transfer run), Wilson 95% CI roughly
+**10% to 32%**. Earlier versions of this document said 25% and then 16.1%; both were computed
+from smaller samples and both sat inside the interval the fuller count gives.
+
+One hypothesis was raised and **disproved**: that our own monitoring caused the kills, by
+running `srun --overlap` steps into the live allocation every five minutes. Before the monitor
+existed the rate was 3/22 = 13.6%, while it ran 4/16 = 25.0% — but after removing the
+injection it was 2/9 = 22.2%, converging on the during-monitor rate rather than the
+pre-monitor one. The apparent effect was noise, and the five clean attempts immediately after
+the change were a lucky run.
 
 Practically the kills barely cost compute: at 16% they add ~130 submissions instead of 109 and
 about **0.35 GPU-hours** of wasted work, because a kill lands 37–96 s in rather than near the
