@@ -25,12 +25,29 @@ half of Phase 1 are done; the rest needs files that live on the robot.
 
 ## Two decisions worth knowing about
 
-**Nautical vocabulary is deliberately untrained.** The eval contains `"Turn to starboard"`
-→ RIGHT, which the model inverts. Any nautical seed is a near-duplicate of that item, so
-training one and testing the other is contamination by paraphrase — the first generated
-batch produced nine `"to starboard side"` rows and the audit caught them. Fixing that
-inversion needs a **refreshed eval with fresh phrasings** first. Until then the class stays
-untrained and honestly measured.
+**Nautical vocabulary is deliberately untrained.** Any nautical seed is a near-duplicate of
+the eval's `"Turn to starboard"` item, so training one and testing the other is contamination
+by paraphrase — the first generated batch produced nine `"to starboard side"` rows and the
+audit caught them. The class stays untrained.
+
+**Correction:** this section previously said the model *inverts* `"Turn to starboard"` and used
+it as the example of a vocabulary gap. That was wrong, and the reason is worth keeping. The
+base model answers it correctly when the prompt is served as a **system turn plus a user
+turn**, and fails only when the same characters arrive as one concatenated user message. The
+brain session's harness was doing the latter; `eval_lora.py` does the former. So it was a
+serving-shape difference, not a lexical limitation, and it was never testing what this section
+claimed.
+
+The shape effect is real and larger than one item: 3 of 10 items move on SM87 and 4 of 10 on
+SM89, base model, no adapter. The decisive case is that under the concatenated shape the base
+answers LEFT to `"Which way are you facing?"` — printed verbatim in its own prompt three lines
+above as `Action: REPORT`. A model failing to reproduce a few-shot example from its own prompt
+is being sabotaged rather than evaluated, so the concatenated shape **understates** a base and
+any cross-shape comparison **overstates** an adapter.
+
+Both columns of every table in this file were measured in the same shape: `eval_lora.py` has a
+single shared `predict()` building `[system, user]`, and the arms differ only in whether
+`PeftModel` is attached, before `predict` is defined.
 
 **The audit is blocking, not advisory.** `gen_command_data.py` exits non-zero rather than
 write data containing an exact hold-out phrase, a near-duplicate of one, or stray
