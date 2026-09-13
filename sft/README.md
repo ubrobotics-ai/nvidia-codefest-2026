@@ -627,6 +627,55 @@ So the honest claim is narrow: a text-only command LoRA did not damage spatial l
 may have improved it by about a point and a half on the measure that controls for the prior.
 Anyone quoting +3.6 points is quoting an artefact of the prior.
 
+## What the adapter contributes outside our own data distribution
+
+The 166-item dev split is seed-disjoint but drawn from the same generator as the training
+data. On independently written items the attributable gain is narrower, and three routes now
+agree on what it is.
+
+The brain session audited its own ten-item probe against `sft/data/commands.jsonl` and against
+the prompt's few-shot examples, and found two items that were never valid tests:
+
+| item | problem | invalidates |
+|---|---|---|
+| `"Turn left"` | present in the training data | the adapter arm only |
+| `"Scan for survivors"` | one of the prompt's own few-shot examples | **both** arms |
+
+The two contaminate differently. Training overlap inflates only the adapter, since the base
+never saw our data. A prompt example inflates whichever model is better at reproducing a
+string printed three lines above the query — and that is itself shape-dependent, as
+`"Which way are you facing?"` showed.
+
+Rescored on the 8 items in neither training nor the prompt: **base 6/8, v3 8/8**, and the
+entire gap is the two refusal items. Nothing else moved. That converges with the Isaac
+session's independent ladder and with the 12-item held-out refusal probe here.
+
+**So the precise claim is: on independently written command items, the adapter's attributable
+gain is refusal and only refusal.** The per-bucket improvements in the seed-disjoint table
+(FORWARD 89.3% → 100%, LEFT 60.0% → 100%) are real on that split but may reflect the
+generator's phrasing style rather than general capability. No independent item set has shown
+them.
+
+Refusal is still the contribution worth having — it is the failure the vocabulary and
+commitment gates provably cannot catch, base scores 0/12 on held-out nonsense, and one
+un-refused non-order set off a full 9-look, 8-turn sweep on the robot. But it is narrower than
+the headline table implies alone.
+
+### How that was found, and the audit's limit
+
+It was found because `sft/data/commands.jsonl` is committed to a public repo and the brain
+session could audit its own probes against it without asking. Their own note is worth keeping:
+they *wrote* those ten items while iterating against the model all day, which is a worse
+contamination than a log leak because it leaves no trace to audit.
+
+Our own holdout audit: **0 exact matches** for all 12 `BASELINE.json` holdout phrases and all
+12 refusal probes. One adjacency is recorded rather than dismissed — the STOP seed list
+contains the bare word `"halt"`, the holdout contains `"Halt immediately"`, and the suffix
+decorator list contains `" immediately"`. The generator blocks any generated string
+*containing* a holdout phrase, so the exact eval item was never trained, but it is reachable
+from a training seed in one decoration step. The audit does not prove what someone would
+assume it proves.
+
 ## The adapter runs on the deployment target
 
 Validated by the brain session on `ubr-robot-0` (Jetson Orin Nano 8 GB, JetPack 7 / CUDA 13.2,
