@@ -154,11 +154,19 @@ source domain, and always score the source with the same instrument.**
 
 ## Cost and the cluster behaviour that dominates it
 
-~245 s per clip. 109 clips is ~7.4 GPU-hours of compute; at the observed ~25% kill rate the
-effective figure is **~8 GPU-hours**, though the kills themselves are cheap (~1 min each) and
-the cost is orchestration rather than wasted compute.
+~245 s per clip. 109 clips is **~7.4 GPU-hours of compute**.
 
-`exit 137` hits roughly 25% of job steps. Ruled out by measurement:
+The kill rate is **16.1%** (5 of 31 attempts across every Transfer run today), Wilson 95% CI
+**7.1% to 32.6%**; `sacct` independently gives 6 FAILED of 38 steps = 15.8%. An earlier version
+of this document said ~25%, which came from a single 8-run repeat (2 kills) and sat at the top
+of that interval — the wider sample brings it down.
+
+Practically the kills barely cost compute: at 16% they add ~130 submissions instead of 109 and
+about **0.35 GPU-hours** of wasted work, because a kill lands 37–96 s in rather than near the
+end. **The cost is orchestration, not compute** — a run without job-level retry loses the
+whole batch, which is what makes this worth designing around rather than absorbing.
+
+`exit 137` therefore hits roughly 1 job step in 6. Ruled out by measurement:
 
 | candidate | evidence |
 |---|---|
