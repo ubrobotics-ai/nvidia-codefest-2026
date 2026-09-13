@@ -424,6 +424,57 @@ which is genuinely ambiguous for a robot carrying a clock.
 
 Dev set through the INT4 engine: **95.8%** (97.0% at bf16).
 
+### All four cells, and the footing that was missing
+
+The table above is bf16-against-bf16, which is sound. But the published model card originally
+put the **bf16 base** beside the **INT4 adapter**, which is mixed footing and understated the
+adapter. The brain session spotted it from a 4.8-point discrepancy against their own base
+measurement. The missing cell — the unmodified INT4 base engine on the same 166 items — is:
+
+| footing | base | v3 | delta |
+|---|---:|---:|---:|
+| bf16, PyTorch | 67.5% | 97.0% | +29.5 |
+| **INT4 engine** | **63.3%** | **95.8%** | **+32.5** |
+
+**Quantisation costs the base 4.2 points and the adapter 1.2.** The adapter is the more
+quantisation-robust of the two — the opposite of what one might assume about adding a merged
+low-rank update before quantising, and worth knowing because it means the bf16 delta
+understates what ships.
+
+### Replicated on a second architecture, without transferring the split
+
+The brain session ran both engines on a Jetson Orin Nano (SM87), scored with the production
+gate rule. They did not receive the dev split: `train_lora.py`'s split is deterministic
+(seed 0, `dev_frac` 0.20, held out by seed phrase), so they **regenerated** it from the public
+`sft/data/commands.jsonl` and verified every per-label count against the published table
+before using it.
+
+| bucket | base INT4, SM103 | base INT4, SM87 | v3 SM103 | v3 SM87 |
+|---|---:|---:|---:|---:|
+| FORWARD | 78.6% | 75.0% | 100.0% | 100.0% |
+| BACK | 84.6% | 84.6% | 96.2% | 96.2% |
+| LEFT | 60.0% | 60.0% | 86.7% | 86.7% |
+| RIGHT | 100.0% | 100.0% | 100.0% | 100.0% |
+| STOP | 50.0% | 50.0% | 100.0% | 100.0% |
+| SEARCH | 94.7% | 94.7% | 100.0% | 100.0% |
+| REPORT | 92.3% | 92.3% | 100.0% | 100.0% |
+| UNKNOWN | 0.0% | 0.0% | 89.2% | 89.2% |
+| **overall** | **63.3%** | **62.7%** | **95.8%** | **95.8%** |
+
+**Every v3 bucket is identical across the two architectures**, and the base arms differ by one
+item in one bucket. That is a stronger replication than the setup had any right to produce.
+
+Two figures from their full-size run worth keeping in their wording:
+
+- **0 of 129 real commands wrongly refused.** The 6/6 claim above now has real weight behind
+  it, and this is the deployment property — the adapter buys refusal without becoming
+  trigger-happy.
+- **Base UNKNOWN is 0 of 37.** Not "poor at refusing" but categorically incapable on a third
+  of the set, which is a cleaner statement of the gap than any aggregate.
+
+The determinism that made this replication possible is a property worth protecting: if the
+split ever stops regenerating identically, the independent-replication route breaks silently.
+
 ### The L0 gate
 
 | arm | k | distance | left_right | mcq | far [12,+) |
