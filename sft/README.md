@@ -609,3 +609,53 @@ from position on 62% of items.
 So the honest claim is narrow: a text-only command LoRA did not damage spatial left/right and
 may have improved it by about a point and a half on the measure that controls for the prior.
 Anyone quoting +3.6 points is quoting an artefact of the prior.
+
+## The adapter runs on the deployment target
+
+Validated by the brain session on `ubr-robot-0` (Jetson Orin Nano 8 GB, JetPack 7 / CUDA 13.2,
+aarch64) from `ubr-physical-ai/Cosmos3-Edge-cmd-v3-onnx`. Not our measurement; recorded with
+their caveats intact.
+
+**The SM87 plan built first try with no patches.** Neither #205 nor #207 was applied and
+neither was needed — the XQA/NVRTC include failure never appeared, which matches the kernel
+gates: `int4_fp16_gemm` declares `supported_sms=[80, 86, 87, 89, 100, 101, 103, 110, 120, 121]`
+against an Ampere kernel script, so the INT4 path was never Blackwell-only.
+
+| | |
+|---|---|
+| build | 70 s, `llm_build` at 4096 context |
+| engine | 879,637,724 bytes |
+| peak host RAM during build | 6,370 MB |
+| resident serving | 826 MiB GPU |
+| INT4 / cuteDSL | plugin resolved, no `-1` from enqueue |
+
+Ten items through the **real Orchestrator turn path** (STT stubbed, real LLMClient, real
+engine), production prompt, system+user shape, temp 0, thinking off:
+
+| arm | score |
+|---|---:|
+| base INT4-AWQ | 8/10 |
+| **cmd-v3** | **10/10** |
+| Gemma 4 E4B | 10/10 |
+
+**Both nonsense items refuse.** `"Sing me a song"` and `"What is the capital of France"` return
+UNKNOWN, the robot reports it did not understand, and **no motor command is emitted**. That is
+the hole the vocabulary and commitment gates provably cannot close, shut on a different SM
+through production code.
+
+### Three caveats they volunteered, kept
+
+**Their ten items are not held out from them** — they iterated against that list all day. It is
+a portability and integration check, not an independent score. The seed-disjoint 166-item dev
+set remains the number that means something.
+
+**`"Turn to starboard"` is not attributable to the adapter.** It was already fixed by the
+system+user message shape, as recorded above.
+
+**Latency from this plan is not quotable.** They built with the base shim still resident and
+~1.1 GB free, producing 588 `Tactic Device request ... insufficient memory` warnings; TensorRT
+fell back to tactics that fit. That is a speed property, not a numerics one, so the quality
+result stands — but tok/s needs a rebuild on an idle board.
+
+**Nothing is deployed.** v3 serves on port 8097, the base engine and its shim on 8096 are
+untouched, and `config.yaml` still points at the base.
