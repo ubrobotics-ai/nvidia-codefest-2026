@@ -14,3 +14,19 @@ a caption states the score.
    mask area and 170 px away from it: photoreal, and mislabelled.
 
 Bands 1 and 3 are usable training data. Bands 2 and 4 are not, yet.
+
+## seven_repairs.png
+
+Every lever the Transfer pipeline exposes, tried against the band-4 failure above. Seven arms,
+one variable each, scored the same way on the same 16 sampled frames. The pass mark was fixed
+before the runs: a person found in at least 8 of 16, within 50 px of the mask, at under 3x the
+mask area.
+
+None passed. The informative part is why the two that did put the person back on its label
+still failed: edge control over the whole frame and depth control both hold the geometry by
+holding the *building*, so the environment never changes, which is the entire reason to run
+Transfer. Pinning geometry pins the scene. On this single-ControlNet pipeline that is a
+property, not a tuning problem.
+
+One thing remains untried: a mask dilated 2x and 3x, to test whether the failure is
+scale-dependent. Indoors at 2,936 px the same prompt lands at 3 px and 1.0x.
