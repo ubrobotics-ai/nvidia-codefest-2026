@@ -33,5 +33,10 @@ holding the *building*, so the environment never changes, which is the entire re
 Transfer. Pinning geometry pins the scene. On this single-ControlNet pipeline that is a
 property, not a tuning problem.
 
-One thing remains untried: a mask dilated 2x and 3x, to test whether the failure is
-scale-dependent. Indoors at 2,936 px the same prompt lands at 3 px and 1.0x.
+Neither strength saves the woodland prompt: at 0.7 the casualty is erased outright (0 of 16
+frames find a person) and at 1.0 it is relocated. The two low-guidance arms managed 1 of 16
+each, by deleting the casualty in the other 15.
+
+One thing remains untried: a mask dilated 2x and 3x. That is NOT a test of scale -- the
+warehouse prompt keeps the label on this same 2,205 px mask -- but of whether a bigger
+control signal can outweigh the prompt.
