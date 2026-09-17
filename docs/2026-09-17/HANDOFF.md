@@ -60,6 +60,14 @@ N2 never converged: adjacent epochs swing by about ±0.07.
 
 ---
 
+> **Correction (same day).** The N-row recalls in section 2a (N0 0.0097, N1-sq 0.2412,
+> N1 0.2863, N2 0.1703) came from a box-level scoring pass that used all non-positive
+> frames as negatives and no +r rule. **They are not the bench harness metric.** With a
+> replica of the harness, the figures are N0 **0.152**, N2 **0.167**, N1-sq **0.217** and
+> N1 **0.274**. The claim that warehouse pretraining is the worst off-the-shelf arm is
+> **withdrawn**. See `INDEX_DETECTOR.md` in this folder. `INDEX_L0.md` indexes the L0
+> spatial tests.
+
 ## 2. Headline results
 
 ### 2a. Detector ladder: recall at matched FA <= 0.005
