@@ -164,9 +164,18 @@ The HF dataset `ubr-physical-ai/rescue-det-preds` (private) holds N0 (all classe
 person-only version), N1-sq, a manifest and the inference patch. N1 and N2 JSONL files are on
 the cluster at `codefest/ubr-det/preds/` and have not been uploaded yet.
 
+## Update (2026-10-03)
+
+Open item 1 is closed. Harness replica, recall at FA <= 0.005: N1-e12 0.264, N1 at 16 epochs
+0.264; N2-e12 0.163 (final) and 0.185 (best, epoch 11), N2 at 16 epochs 0.180. More epochs do
+not help either arm. The permissive replacements (RF-DETR, D-FINE), their Jetson latency, the
+deployed yolo26n on the same split, and the ten-class model are in
+`docs/2026-10-03/DETECTOR_PERMISSIVE.md`. The rows marked "still running" and "not yet scored"
+in the arm inventory above are superseded by those figures.
+
 ## Open
 
-1. Score N1-e12 and N2-e12. For N2, report both the best epoch (11) and the final epoch.
+1. ~~Score N1-e12 and N2-e12.~~ Done, see the update above.
 2. Have the bench score N0, N1 and N2 on its own harness in one run with B0 and B1, to settle
    the ordering.
 3. A fair backbone arm (resnet_18 with an ImageNet backbone init) is still untested.

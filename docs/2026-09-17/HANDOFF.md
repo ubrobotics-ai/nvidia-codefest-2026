@@ -68,6 +68,16 @@ N2 never converged: adjacent epochs swing by about ±0.07.
 > **withdrawn**. See `INDEX_DETECTOR.md` in this folder. `INDEX_L0.md` indexes the L0
 > spatial tests.
 
+> **Update (2026-10-03).** Three things here are out of date.
+> - The team QOS has been `gres/gpu=8, cpu=256` since 2026-09-29 (section 0 still says one
+>   GPU). It is shared by four people.
+> - Gotcha 6 is incomplete: named pyxis containers live on **shared** storage, so two
+>   concurrent jobs must not use the same `--container-name`.
+> - The N1 and N2 runs of section 1 finished. N1 reaches 0.264 at both 12 and 16 epochs, and
+>   N2 0.163 (12, final), 0.185 (12, best epoch) and 0.180 (16).
+> The permissive-detector results, the ten-class model and further gotchas are in
+> `docs/2026-10-03/DETECTOR_PERMISSIVE.md`.
+
 ## 2. Headline results
 
 ### 2a. Detector ladder: recall at matched FA <= 0.005
