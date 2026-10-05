@@ -1,0 +1,72 @@
+# UBR rescue: D-FINE-S, single class, held-out hospital split. Apache-2.0.
+# Matched to the detector ladder: same 91,647 / 22,060 frames, 12 epochs, started from COCO
+# weights (the yolo arms also start from COCO), fine-tuned with `-t dfine_s_coco.pth`.
+#
+# Two defaults overridden because they would silently squash 1280x720 frames into a square:
+#   - Resize and eval_spatial_size are set to [704, 1280]. ORDER IS [HEIGHT, WIDTH]
+#     (torchvision Resize, and the `# h w` note in include/dfine_hgnetv2.yml). 704 not 720:
+#     the stride-32 feature map needs an integer.
+#   - The multi-scale collate interpolates every batch to a single square size, so it is
+#     disabled (base_size_repeat: ~).
+#
+# Labels: remap_mscoco_category is False, so the COCO category_id IS the label index. Our only
+# category has id 1, so num_classes is 2 and PERSON IS INDEX 1.
+__include__: [
+  './dfine_hgnetv2_s_custom.yml',
+]
+
+output_dir: /storage/hackathon_teams/omc-team15/codefest/permissive/runs/dfine_s
+
+num_classes: 2
+remap_mscoco_category: False
+eval_spatial_size: [704, 1280]
+
+HybridEncoder:
+  eval_spatial_size: [704, 1280]
+
+DFINETransformer:
+  eval_spatial_size: [704, 1280]
+
+epochs: 12
+
+train_dataloader:
+  dataset:
+    img_folder: /storage/hackathon_teams/omc-team15/codefest/ubr-det/data/coco_rebal/train
+    ann_file: /storage/hackathon_teams/omc-team15/codefest/ubr-det/data/coco_rebal/train.json
+    transforms:
+      ops:
+        - {type: RandomPhotometricDistort, p: 0.5}
+        - {type: RandomZoomOut, fill: 0}
+        - {type: RandomIoUCrop, p: 0.8}
+        - {type: SanitizeBoundingBoxes, min_size: 1}
+        - {type: RandomHorizontalFlip}
+        - {type: Resize, size: [704, 1280], }
+        - {type: SanitizeBoundingBoxes, min_size: 1}
+        - {type: ConvertPILImage, dtype: 'float32', scale: True}
+        - {type: ConvertBoxes, fmt: 'cxcywh', normalize: True}
+      policy:
+        name: stop_epoch
+        epoch: 10   # last 2 of 12 epochs without zoom/crop/distort, as the recipe does at the end
+        ops: ['RandomPhotometricDistort', 'RandomZoomOut', 'RandomIoUCrop']
+  collate_fn:
+    base_size_repeat: ~
+    stop_epoch: 10
+    ema_restart_decay: 0.9999
+  total_batch_size: 32
+  num_workers: 16
+
+val_dataloader:
+  dataset:
+    img_folder: /storage/hackathon_teams/omc-team15/codefest/ubr-det/data/coco_rebal/val
+    ann_file: /storage/hackathon_teams/omc-team15/codefest/ubr-det/data/coco_rebal/val.json
+    transforms:
+      ops:
+        - {type: Resize, size: [704, 1280], }
+        - {type: ConvertPILImage, dtype: 'float32', scale: True}
+  total_batch_size: 64
+  num_workers: 16
+
+# First 4-GPU run hung at step ~1950 of epoch 0: ranks entered allreduces of different sizes
+# (NCCL timeout). Likely a batch whose loss leaves some parameters without gradients (25% of
+# frames are empty), which desyncs DDP's buckets. Let DDP detect unused parameters.
+find_unused_parameters: True
