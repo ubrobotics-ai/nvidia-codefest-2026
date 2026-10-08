@@ -1,0 +1,1101 @@
+diff --git a/cosmos_framework/configs/base/config.py b/cosmos_framework/configs/base/config.py
+index 73b37e1..128f000 100644
+--- a/cosmos_framework/configs/base/config.py
++++ b/cosmos_framework/configs/base/config.py
+@@ -97,6 +97,7 @@ def make_config() -> Config:
+     import cosmos_framework.configs.base.experiment.action.posttrain_config.action_policy_droid_nano  # noqa: F401
+     import cosmos_framework.configs.base.experiment.action.posttrain_config.action_policy_libero_all_nano  # noqa: F401
+     import cosmos_framework.configs.base.experiment.action.posttrain_config.action_policy_libero_edge  # noqa: F401
++    import cosmos_framework.configs.base.experiment.action.posttrain_config.action_policy_g1_hug_edge  # noqa: F401
+     import cosmos_framework.configs.base.experiment.action.posttrain_config.action_policy_libero_nano  # noqa: F401
+     import cosmos_framework.configs.base.experiment.action.posttrain_config.action_policy_robocasa_nano  # noqa: F401
+     import cosmos_framework.configs.base.experiment.action.posttrain_config.action_fd_droid_posttrain  # noqa: F401
+diff --git a/cosmos_framework/data/generator/action/datasets/__init__.py b/cosmos_framework/data/generator/action/datasets/__init__.py
+index 6797cba..4799858 100644
+--- a/cosmos_framework/data/generator/action/datasets/__init__.py
++++ b/cosmos_framework/data/generator/action/datasets/__init__.py
+@@ -16,6 +16,7 @@ from cosmos_framework.data.generator.action.datasets.bridge_orig_lerobot_dataset
+ from cosmos_framework.data.generator.action.datasets.droid_merged_lerobot_dataset import DROIDMergedLeRobotDataset
+ from cosmos_framework.data.generator.action.datasets.droid_lerobot_dataset import DROIDLeRobotDataset
+ from cosmos_framework.data.generator.action.datasets.fractal_lerobot_dataset import FractalLeRobotDataset
++from cosmos_framework.data.generator.action.datasets.g1_hug_lerobot_dataset import G1HugLeRobotDataset
+ from cosmos_framework.data.generator.action.datasets.human_hand_pose_lerobot_dataset import HumanHandPoseLeRobotDataset
+ from cosmos_framework.data.generator.action.datasets.robocasa_lerobot_dataset import RoboCasaLeRobotDataset
+ from cosmos_framework.data.generator.action.datasets.libero_lerobot_dataset import LIBEROLeRobotDataset
+@@ -30,6 +31,7 @@ __all__ = [
+     "DROIDLeRobotDataset",
+     "DROIDMergedLeRobotDataset",
+     "FractalLeRobotDataset",
++    "G1HugLeRobotDataset",
+     "HumanHandPoseLeRobotDataset",
+     "RoboCasaLeRobotDataset",
+     "LIBEROLeRobotDataset",
+diff --git a/cosmos_framework/data/generator/action/datasets/action_sft_dataset.py b/cosmos_framework/data/generator/action/datasets/action_sft_dataset.py
+index c0638e2..30e0a20 100644
+--- a/cosmos_framework/data/generator/action/datasets/action_sft_dataset.py
++++ b/cosmos_framework/data/generator/action/datasets/action_sft_dataset.py
+@@ -371,3 +371,58 @@ def get_action_libero_sft_dataset(
+     if iterable_shuffle:
+         return ActionIterableShuffleDataset(sft, seed=episode_shuffle_seed)
+     return sft
++
++
++def get_action_g1_hug_sft_dataset(
++    root: str,
++    fps: float = 10.0,
++    chunk_length: int = 16,
++    mode: str = "wam",
++    viewpoint: str = "concat_view",
++    action_normalization: str | None = "quantile",
++    action_stats_path: str | None = None,
++    split: str = "train",
++    resolution: str | int | None = None,
++    max_action_dim: int = 64,
++    tokenizer_config: dict | None = None,
++    cfg_dropout_rate: float = 0.1,
++    append_viewpoint_info: bool = True,
++    append_duration_fps_timestamps: bool = True,
++    append_resolution_info: bool = True,
++    append_idle_frames: bool = True,
++    format_prompt_as_json: bool = False,
++    iterable_shuffle: bool = False,
++    episode_shuffle_seed: int = 42,
++) -> Dataset:
++    """Build the Unitree G1 hug (two-arm box lift) action-policy SFT dataset.
++
++    Feeds ``G1HugLeRobotDataset`` (29-D AgiBot-layout framewise-delta actions, quantile
++    normalized, head + two wrist views as ``concat_view`` or the head view alone as
++    ``ego_view``) through ``ActionTransformPipeline``. ``root`` is a local LeRobot v3 dir.
++    """
++    from cosmos_framework.data.generator.action.datasets.g1_hug_lerobot_dataset import G1HugLeRobotDataset
++
++    dataset = G1HugLeRobotDataset(
++        root=root,
++        fps=fps,
++        chunk_length=chunk_length,
++        mode=mode,
++        viewpoint=viewpoint,
++        action_normalization=action_normalization,
++        action_stats_path=action_stats_path,
++        split=split,
++    )
++    transform = ActionTransformPipeline(
++        tokenizer_config=tokenizer_config,
++        cfg_dropout_rate=cfg_dropout_rate,
++        max_action_dim=max_action_dim,
++        append_viewpoint_info=append_viewpoint_info,
++        append_duration_fps_timestamps=append_duration_fps_timestamps,
++        append_resolution_info=append_resolution_info,
++        append_idle_frames=append_idle_frames,
++        format_prompt_as_json=format_prompt_as_json,
++    )
++    sft = ActionSFTDataset(dataset, transform, resolution)
++    if iterable_shuffle:
++        return ActionIterableShuffleDataset(sft, seed=episode_shuffle_seed)
++    return sft
+diff --git a/cosmos_framework/data/generator/action/utils/domain_utils.py b/cosmos_framework/data/generator/action/utils/domain_utils.py
+index 4d00f36..9213880 100644
+--- a/cosmos_framework/data/generator/action/utils/domain_utils.py
++++ b/cosmos_framework/data/generator/action/utils/domain_utils.py
+@@ -58,6 +58,9 @@ EMBODIMENT_TO_DOMAIN_ID: dict[str, int] = {
+     # "embodiment_b" (domain 9, an earlier unrelated sample drop with its own 30D
+     # contract).
+     "embodiment_b_20260828": 32,
++    # Unitree G1 two-arm box lift (sim): the same 29-D [head, right arm/open, left arm/open] FK contract
++    # as Embodiment C, so it shares that domain like GenieSim G2A.
++    "unitree_g1_hug": 15,
+ }
+ 
+ 
+@@ -93,6 +96,7 @@ EMBODIMENT_TO_RAW_ACTION_DIM: dict[str, int] = {
+     "geniesim3_g2a": 29,
+     "geniesim3_g2a_joint": 16,
+     "embodiment_b_20260828": 50,
++    "unitree_g1_hug": 29,
+     # NOTE: ``libero`` (7/10/13 depending on ``rotation_space``), ``hand_pose``
+     # (variable with ``keypoint_option`` and ``rotation_format``) and ``robocasa``
+     # (10 arm-only, 15/20 with the mobile base, per ``use_base_action`` /
+diff --git a/cosmos_framework/scripts/action_policy_server_libero.py b/cosmos_framework/scripts/action_policy_server_libero.py
+index 9ef6845..d72f3c3 100644
+--- a/cosmos_framework/scripts/action_policy_server_libero.py
++++ b/cosmos_framework/scripts/action_policy_server_libero.py
+@@ -841,7 +841,15 @@ class ActionModelService:
+             input_video_key = getattr(self.model, "config", None).input_video_key  # type: ignore[union-attr]
+         return input_video_key
+ 
+-    def _build_json_prompt(self, prompt: str, *, video: torch.Tensor, image_size: torch.Tensor) -> str:
++    def _build_json_prompt(
++        self,
++        prompt: str,
++        *,
++        video: torch.Tensor,
++        image_size: torch.Tensor,
++        viewpoint: str = _LIBERO_JSON_VIEWPOINT,
++        additional_view_description: str | None = None,
++    ) -> str:
+         """Reproduce the training-time JSON prompt for format_prompt_as_json=True runs.
+ 
+         Runs the same ``ActionPromptJsonFormatter`` the training pipeline uses (after
+@@ -851,7 +859,7 @@ class ActionModelService:
+         the zero ``action`` (total-frame count) mirror the LIBERO concat_view dataset."""
+         data_dict: dict[str, Any] = {
+             "ai_caption": prompt,
+-            "viewpoint": _LIBERO_JSON_VIEWPOINT,
++            "viewpoint": viewpoint,
+             "video": video,  # post-pad [C,T,H,W]; formatter reads T for duration
+             "image_size": image_size,  # post-pad [H,W]; formatter reads resolution
+             "conditioning_fps": torch.tensor(self.cfg.fps, dtype=torch.long),
+@@ -860,6 +868,8 @@ class ActionModelService:
+             "action": torch.zeros((self.cfg.action_chunk_size, self.cfg.max_action_dim), dtype=torch.float32),
+             "idle_frames": torch.tensor(0, dtype=torch.long),
+         }
++        if additional_view_description:
++            data_dict["additional_view_description"] = additional_view_description
+         formatted = self._prompt_json_formatter(data_dict)["ai_caption"]
+         return json.dumps(formatted) if isinstance(formatted, dict) else str(formatted)
+ 
+@@ -879,6 +889,13 @@ class ActionModelService:
+         image_size = req.get("image_size")
+         if not isinstance(image_size, int) or image_size <= 0:
+             raise ValueError("'image_size' must be a positive integer")
++        # Optional: the training viewpoint and view description of non-LIBERO datasets (e.g. G1 hug ego_view).
++        viewpoint = req.get("viewpoint", _LIBERO_JSON_VIEWPOINT)
++        additional_view_description = req.get("additional_view_description")
++        if not isinstance(viewpoint, str) or not (
++            additional_view_description is None or isinstance(additional_view_description, str)
++        ):
++            raise ValueError("'viewpoint' and 'additional_view_description' must be strings")
+ 
+         img_chw_uint8 = _decode_base64_png_to_rgb_uint8(image_b64)
+         img_h, img_w = img_chw_uint8.shape[-2:]
+@@ -906,7 +923,11 @@ class ActionModelService:
+         )
+         if self._prompt_json_formatter is not None:
+             augmented_prompt = self._build_json_prompt(
+-                prompt, video=pad_dict["video"], image_size=pad_dict["image_size"]
++                prompt,
++                video=pad_dict["video"],
++                image_size=pad_dict["image_size"],
++                viewpoint=viewpoint,
++                additional_view_description=additional_view_description,
+             )
+         else:
+             augmented_prompt = _augment_prompt_with_metadata(
+diff --git a/cosmos_framework/configs/base/experiment/action/posttrain_config/action_policy_g1_hug_edge.py b/cosmos_framework/configs/base/experiment/action/posttrain_config/action_policy_g1_hug_edge.py
+new file mode 100644
+index 0000000..207e1d2
+--- /dev/null
++++ b/cosmos_framework/configs/base/experiment/action/posttrain_config/action_policy_g1_hug_edge.py
+@@ -0,0 +1,235 @@
++# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++# SPDX-License-Identifier: OpenMDW-1.1
++
++"""``action_policy_g1_hug_edge`` — Cosmos3-Edge action-policy SFT on Unitree G1 two-arm box-lift demos.
++
++Same model, optimizer, scheduler and trainer blocks as ``action_policy_g1_hug_edge``; only the
++data differs: ``G1HugLeRobotDataset`` (simulated G1 29-DoF + Dex3 "hug" lifts, 10 Hz, 29-D
++AgiBot-layout framewise-delta head + dual-arm actions, quantile normalized, head + two wrist
++views as ``concat_view``). Starts from the public ``nvidia/Cosmos3-Edge`` base with fresh
++action heads. Env: ``G1_HUG_ROOT`` (local LeRobot v3 dir) and ``G1_HUG_STATS`` (action stats
++JSON from ``tools/compute_action_stats.py``).
++"""
++
++import copy
++import os
++
++from hydra.core.config_store import ConfigStore
++
++from cosmos_framework.configs.base.experiment.sft.models.edge_model_config import EDGE_MODEL_CONFIG
++from cosmos_framework.data.generator.action.datasets.action_sft_dataset import get_action_g1_hug_sft_dataset
++from cosmos_framework.data.generator.joint_dataloader import (
++    PackingDataLoader,
++    RankPartitionedDataLoader,
++)
++from cosmos_framework.utils.lazy_config import LazyCall as L
++from cosmos_framework.utils.lazy_config import LazyDict
++
++cs = ConfigStore.instance()
++
++
++def _action_policy_g1_hug_edge_model_config() -> dict:
++    """G1 hug model config (Edge): identical to the LIBERO Edge recipe."""
++    cfg = copy.deepcopy(EDGE_MODEL_CONFIG)  # action_gen=True, max_action_dim=64
++    # Cap the packed sequence. Uncapped (-1) + a large max_samples_per_batch packs
++    # one very long sequence and OOMs even on H200; 74000 keeps the GA-validated bound.
++    cfg["max_num_tokens_after_packing"] = 74000
++    cfg["activation_checkpointing"]["mode"] = "selective"
++    cfg["diffusion_expert_config"]["load_weights_from_pretrained"] = False
++    cfg["rectified_flow_training_config"]["loss_scale"] = 10.0
++    cfg["rectified_flow_training_config"]["image_loss_scale"] = None
++    cfg["tokenizer"]["encode_exact_durations"] = [17, 61, 73]  # match Cosmos3 base + reference SFT (do NOT reduce)
++    return cfg
++
++
++action_policy_g1_hug_edge = LazyDict(
++    dict(
++        defaults=[
++            {"override /model": "mot_fsdp"},
++            {"override /data_train": None},
++            {"override /data_val": None},
++            # FusedAdam with fp32 master_weights + eps 1e-8 (bf16 params + eps 1e-6
++            # diverged on the action loss).
++            {"override /optimizer": "fusedadamw"},
++            {"override /scheduler": "lambdalinear"},  # linear LR decay
++            {"override /checkpoint": "s3"},
++            {
++                "override /callbacks": [
++                    "basic",
++                    "optimization",
++                    "job_monitor",
++                ]
++            },
++            {"override /ema": "power"},
++            {"override /tokenizer": "wan2pt2_tokenizer"},
++            {"override /sound_tokenizer": None},
++            {"override /vlm_config": None},
++            {"override /ckpt_type": "dcp"},
++            "_self_",
++        ],
++        job=dict(
++            project="cosmos3",
++            group="action_sft",
++            name="action_policy_g1_hug_edge",
++            wandb_mode="disabled",
++        ),
++        model=dict(
++            config=_action_policy_g1_hug_edge_model_config(),
++        ),
++        optimizer=dict(
++            betas=[0.9, 0.99],
++            eps=1.0e-08,
++            fused=True,  # popped by build_optimizer for FusedAdam (fused by construction)
++            # Train the generation + action heads.
++            keys_to_select=[
++                "moe_gen",
++                "time_embedder",
++                "vae2llm",
++                "llm2vae",
++                "k_norm_und_for_gen",  # Edge: und-K norm trains with the gen pathway (as vision_sft_edge)
++                "action2llm",
++                "llm2action",
++                "action_modality_embed",
++            ],
++            lr=5.0e-05,
++            lr_multipliers={
++                "action2llm": 5.0,
++                "llm2action": 5.0,
++                "action_modality_embed": 5.0,
++            },
++            optimizer_type="FusedAdam",
++            weight_decay=0.05,
++        ),
++        scheduler=dict(
++            lr_scheduler_type="LambdaLinear",
++            cycle_lengths=[100],  # smoke: 100 iters (real run sets via TOML, GA=10000)
++            f_max=[1.0],
++            f_min=[0.0],
++            f_start=[1.0e-06],
++            verbosity_interval=0,
++            warm_up_steps=[0],  # smoke (real run sets via TOML, GA=2000)
++        ),
++        trainer=dict(
++            distributed_parallelism="fsdp",
++            grad_accum_iter=1,  # real run sets via TOML (GA=2)
++            logging_iter=1,
++            max_iter=100,  # smoke
++            max_val_iter=None,
++            run_validation=False,
++            run_validation_on_start=False,
++            save_zero_checkpoint=False,
++            seed=42,
++            timeout_period=999999999,
++            validation_iter=100,
++            compile_config=dict(recompile_limit=8, use_duck_shape=False),
++            cudnn=dict(benchmark=True, deterministic=False),
++            ddp=dict(broadcast_buffers=True, find_unused_parameters=False, static_graph=True),
++            grad_scaler_args=dict(enabled=False),
++            callbacks=dict(
++                dataloader_speed=dict(every_n=100, save_s3=False, step_size=1),
++                device_monitor=dict(
++                    every_n=200, log_memory_detail=True, save_s3=False, step_size=1, upload_every_n_mul=5
++                ),
++                grad_clip=dict(clip_norm=1.0, force_finite=True),
++                heart_beat=dict(every_n=200, save_s3=False, step_size=1, update_interval_in_minute=20),
++                iter_speed=dict(every_n=1, hit_thres=50, save_s3=False, save_s3_every_log_n=500),
++                low_precision=dict(update_iter=1),
++                manual_gc=dict(every_n=5, gc_level=1, warm_up=1),
++                param_count=dict(save_s3=False),
++                skip_nan_step=dict(max_consecutive_nan=100),
++                training_stats=dict(log_freq=100),
++            ),
++        ),
++        checkpoint=dict(
++            broadcast_via_filesystem=False,
++            dcp_async_mode_enabled=False,
++            enable_gcs_patch_in_boto3=True,
++            keys_not_to_resume=[],
++            # Skip net_ema (EMA warm-starts from net, see dcp.py) and the action
++            # heads, so they init fresh from the base (the public Cosmos3-Edge base
++            # has no G1-trained action heads).
++            keys_to_skip_loading=[
++                "net_ema.",
++                "action2llm",
++                "llm2action",
++                "action_modality_embed",
++                "action_pos_embed",
++            ],
++            load_ema_to_reg=False,
++            load_path="???",  # Cosmos3-Edge DCP dir; supply via TOML/env
++            load_training_state=False,
++            only_load_scheduler_state=False,
++            save_iter=100,
++            strict_resume=False,  # base init: tolerate key set differences
++            verbose=True,
++            hf_export=dict(
++                enabled=False,
++                export_every_n=1,
++                hf_repo_id=None,
++                upload_to_object_store=dict(bucket="", credentials="", enabled=False),
++            ),
++            jit=dict(device="cuda", dtype="bfloat16", enabled=False, input_shape=None, strict=True),
++            load_from_object_store=dict(bucket="", credentials="", enabled=False),
++            save_to_object_store=dict(bucket="", credentials="", enabled=False),
++        ),
++        dataloader_train=L(PackingDataLoader)(
++            audio_sample_rate=48000,
++            dataset_name="action_g1_hug",
++            # LOCAL: G1_MAX_SAMPLES_PER_BATCH (default 128) lets a B300 run use 256 with grad_accum halved (same global batch).
++            max_samples_per_batch=int(os.environ.get("G1_MAX_SAMPLES_PER_BATCH", "128")),  # peak-mem bound (256 OOMs on H200); global = 128 x DP8 x grad_accum2 = 2048
++            max_sequence_length=None,  # None disables token packing (TOML can't express null)
++            patch_spatial=2,
++            sound_latent_fps=0,
++            tokenizer_spatial_compression_factor=16,
++            tokenizer_temporal_compression_factor=4,
++            dataloader=L(RankPartitionedDataLoader)(
++                batch_size=1,
++                in_order=False,
++                num_workers=4,
++                persistent_workers=True,
++                pin_memory=True,
++                prefetch_factor=4,
++                sampler=None,
++                # Shuffling is handled by the dataset (iterable_shuffle=True below):
++                # ActionIterableShuffleDataset streams rank x worker-sharded, episode-order-
++                # shuffled, sequential-within-episode.
++                datasets=dict(
++                    g1_hug=dict(
++                        ratio=1,
++                        dataset=L(get_action_g1_hug_sft_dataset)(
++                            root="${oc.env:G1_HUG_ROOT}",
++                            action_stats_path="${oc.env:G1_HUG_STATS}",
++                            fps=10,  # metadata only (the loader reads the native fps from info.json)
++                            chunk_length=16,
++                            mode="wam",
++                            viewpoint="concat_view",  # head on top, both wrists below
++                            action_normalization="quantile",
++                            split="train",
++                            iterable_shuffle=True,
++                            episode_shuffle_seed=42,
++                            resolution="256",
++                            max_action_dim="${model.config.max_action_dim}",
++                            cfg_dropout_rate=0.1,
++                            format_prompt_as_json=True,
++                            tokenizer_config="${model.config.vlm_config.tokenizer}",
++                        ),
++                    ),
++                ),
++            ),
++        ),
++        dataloader_val=None,
++        upload_reproducible_setup=False,
++    ),
++    flags={"allow_objects": True},
++)
++
++
++# Head camera only: the real G1 has no wrist cameras, so this is the deployable variant.
++action_policy_g1_hug_edge_ego = copy.deepcopy(action_policy_g1_hug_edge)
++action_policy_g1_hug_edge_ego["job"]["name"] = "action_policy_g1_hug_edge_ego"
++action_policy_g1_hug_edge_ego["dataloader_train"]["dataloader"]["datasets"]["g1_hug"]["dataset"]["viewpoint"] = "ego_view"
++
++
++for _item in [action_policy_g1_hug_edge, action_policy_g1_hug_edge_ego]:
++    _name = [k for k, v in globals().items() if v is _item][0]
++    cs.store(group="experiment", package="_global_", name=_name, node=_item)
+diff --git a/cosmos_framework/data/generator/action/datasets/g1_hug_lerobot_dataset.py b/cosmos_framework/data/generator/action/datasets/g1_hug_lerobot_dataset.py
+new file mode 100644
+index 0000000..1eeb35d
+--- /dev/null
++++ b/cosmos_framework/data/generator/action/datasets/g1_hug_lerobot_dataset.py
+@@ -0,0 +1,239 @@
++# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++# SPDX-License-Identifier: OpenMDW-1.1
++
++"""Unitree G1 two-arm box-lift ("hug") LeRobot dataset.
++
++Simulated G1 29-DoF + Dex3 demos recorded in Isaac Lab and converted to LeRobot v3. The
++stored ``action`` column already holds the 29-D head + dual-arm contract used by AgiBot
++(``agibotworld``, domain 15):
++
++    [head_pos+rot6d(9), right_pos+rot6d(9), right_open(1), left_pos+rot6d(9), left_open(1)]
++
++where each 9-D block is the backward framewise delta ``T_t^-1 T_{t+1}`` of the head camera
++or wrist pose (``pose_abs_to_rel``, rot6d = first two rotation-matrix columns) and the
++openness is absolute (1 = open). The loader therefore slices the stored per-frame actions
++directly, like ``LIBEROLeRobotDataset``, with a compact column index instead of row dicts.
++
++Views: ``concat_view`` (default) puts the head camera on top and the two wrist cameras,
++each resized to half the head size, side by side below it (AgiBot layout). The real G1
++has only the head camera, so ``ego_view`` (head only) is the deployable setting.
++
++Split: the converter writes ``info.json["splits"]`` (``"train": "a:b"``, ``"val": "b:c"``
++episode-index ranges); ``split="full"`` keeps every episode.
++"""
++
++from __future__ import annotations
++
++import json
++import os
++import random
++from pathlib import Path
++from typing import Any, Literal
++
++import numpy as np
++import pyarrow.parquet as pq
++import torch
++import torch.nn.functional as F
++
++from cosmos_framework.data.generator.action.datasets.agibotworld_beta_lerobot_dataset import (
++    _compute_idle_frames_agibot,
++)
++from cosmos_framework.data.generator.action.datasets.base_dataset import ActionBaseDataset
++from cosmos_framework.data.generator.action.utils.action_spec import ActionSpec, Gripper, Pos, Rot, build_action_spec
++from cosmos_framework.utils import log
++
++Viewpoint = Literal["concat_view", "ego_view"]
++
++_HEAD_KEY = "observation.images.head"
++_HAND_LEFT_KEY = "observation.images.hand_left"
++_HAND_RIGHT_KEY = "observation.images.hand_right"
++_ACTION_KEY = "action"
++
++_NORMALIZERS_DIR = Path(__file__).parent.parent / "normalizer_stats"
++_DEFAULT_STATS = _NORMALIZERS_DIR / "g1_hug_lerobot_stats.json"
++
++
++class G1HugLeRobotDataset(ActionBaseDataset):
++    """G1 hug demos with the 29-D AgiBot-layout framewise-delta action."""
++
++    def __init__(
++        self,
++        root: str,
++        fps: float = 10.0,
++        chunk_length: int = 16,
++        mode: str = "wam",
++        pose_convention: str = "backward_framewise",
++        tolerance_s: float = 3e-4,
++        viewpoint: Viewpoint = "concat_view",
++        action_normalization: str | None = "quantile",
++        action_stats_path: str | None = None,
++        split: str = "train",
++        sample_stride: int = 1,
++    ) -> None:
++        if viewpoint not in ("concat_view", "ego_view"):
++            raise NotImplementedError("Supported viewpoints are concat_view and ego_view.")
++        super().__init__(
++            root=root,
++            domain_name="unitree_g1_hug",
++            fps=fps,
++            chunk_length=chunk_length,
++            mode=mode,
++            pose_convention=pose_convention,
++            tolerance_s=tolerance_s,
++            viewpoint=viewpoint,
++            action_normalization=action_normalization,
++            sample_stride=sample_stride,
++        )
++        info_fps = self._info.get("fps")
++        if info_fps and float(info_fps) != self._fps:
++            log.info(f"G1 hug: using the dataset's native fps={info_fps} (requested {fps}).")
++            self._fps = float(info_fps)
++            self._dt = 1.0 / self._fps
++        self._stats_file = Path(action_stats_path) if action_stats_path else _DEFAULT_STATS
++        if action_normalization is not None and not self._stats_file.exists():
++            raise FileNotFoundError(f"G1 hug action stats not found at {self._stats_file}.")
++
++        index_parts, episode_parts, task_parts, ts_parts, action_parts = [], [], [], [], []
++        for path in sorted((self._root / "data").glob("chunk-*/file-*.parquet")):
++            table = pq.read_table(path, columns=["index", "episode_index", "task_index", "timestamp", _ACTION_KEY])
++            index_parts.append(table["index"].to_numpy())
++            episode_parts.append(table["episode_index"].to_numpy())
++            task_parts.append(table["task_index"].to_numpy())
++            ts_parts.append(table["timestamp"].to_numpy())
++            action_parts.append(np.asarray(table[_ACTION_KEY].to_pylist(), dtype=np.float32))
++        if not index_parts:
++            raise FileNotFoundError(f"No data parquet found under {self._root / 'data'}.")
++        order = np.argsort(np.concatenate(index_parts).astype(np.int64), kind="stable")
++        self._row_episode = np.concatenate(episode_parts).astype(np.int64)[order]
++        self._row_task = np.concatenate(task_parts).astype(np.int64)[order]
++        self._row_timestamp = np.concatenate(ts_parts).astype(np.float64)[order]
++        self._row_action = np.concatenate(action_parts, axis=0).astype(np.float32)[order]
++        if self._row_action.shape[1] != self.action_dim:
++            raise ValueError(f"Expected a {self.action_dim}-D action column, got {self._row_action.shape[1]}.")
++
++        assert np.all(np.diff(self._row_episode) >= 0), "episode_index not contiguous after sorting by frame index"
++        ep_vals, ep_starts, ep_counts = np.unique(self._row_episode, return_index=True, return_counts=True)
++        keep = self._split_episode_ids(ep_vals.tolist(), split)
++        # Data-efficiency runs: G1_HUG_EPISODES names a JSON list of episode indices; the train split keeps only those.
++        sub = os.environ.get("G1_HUG_EPISODES", "")
++        if sub and split.lower().strip() == "train":
++            keep &= set(int(v) for v in json.load(open(sub)))
++        kept =np.array([int(v) in keep for v in ep_vals], dtype=bool)
++        self._ep_vals = ep_vals.astype(np.int64)[kept]
++        self._ep_starts = ep_starts.astype(np.int64)[kept]
++        # Windows of chunk_length + 1 frames inside one episode.
++        self._valid_cum = np.cumsum(np.maximum(0, ep_counts.astype(np.int64)[kept] - self._chunk_length)).astype(
++            np.int64
++        )
++        log.info(
++            f"Loaded G1 hug dataset root={self._root} split={split!r} viewpoint={viewpoint!r} fps={self._fps} "
++            f"kept_episodes={len(self._ep_vals)}/{len(ep_vals)} valid_indices={len(self)}"
++        )
++
++    @property
++    def action_dim(self) -> int:
++        return 29
++
++    def _action_spec(self) -> ActionSpec:
++        return build_action_spec(
++            Pos(prefix="head"),
++            Rot("rot6d", prefix="head"),
++            Pos(prefix="right"),
++            Rot("rot6d", prefix="right"),
++            Gripper(prefix="right"),
++            Pos(prefix="left"),
++            Rot("rot6d", prefix="left"),
++            Gripper(prefix="left"),
++        )
++
++    @classmethod
++    def _stats_path(cls) -> Path:
++        return _DEFAULT_STATS
++
++    def _load_norm_stats(self) -> dict[str, torch.Tensor]:
++        if self._norm_stats is None:
++            raw = json.loads(self._stats_file.read_text())
++            self._norm_stats = {
++                k: torch.tensor(v, dtype=torch.float32)
++                for k, v in raw.items()
++                if k in ("mean", "std", "min", "max", "q01", "q99")
++            }
++        return self._norm_stats
++
++    def _compute_idle_frames(self, action: torch.Tensor) -> int:
++        return _compute_idle_frames_agibot(action)
++
++    def _split_episode_ids(self, ep_ids: list[int], split: str) -> set[int]:
++        split = split.lower().strip()
++        if split == "full":
++            return set(int(v) for v in ep_ids)
++        ranges = self._info.get("splits", {})
++        name = "train" if split == "train" else "val"
++        if name not in ranges:
++            raise ValueError(f"info.json has no {name!r} split; use split='full'.")
++        lo, hi = (int(x) for x in str(ranges[name]).split(":"))
++        return set(int(v) for v in ep_ids if lo <= int(v) < hi)
++
++    def __len__(self) -> int:
++        return int(self._valid_cum[-1]) if self._valid_cum.size else 0
++
++    def get_shuffle_blocks(self) -> list[tuple[int, int]]:
++        """Per-episode ``(start, length)`` flat-index blocks for ``ActionIterableShuffleDataset``."""
++        blocks: list[tuple[int, int]] = []
++        prev = 0
++        for c in self._valid_cum.tolist():
++            if c > prev:
++                blocks.append((prev, c - prev))
++            prev = c
++        return blocks
++
++    def __getitem__(self, idx: int) -> dict[str, Any]:
++        n = len(self)
++        last_err: Exception | None = None
++        for _attempt in range(8):
++            try:
++                return self._build_item(idx)
++            except Exception as e:  # noqa: BLE001 — skip past undecodable frames
++                last_err = e
++                log.warning(f"G1 hug: sample idx={idx} failed to load ({type(e).__name__}: {e}); resampling")
++                if n > 0:
++                    idx = random.randint(0, n - 1)
++        raise RuntimeError(f"G1 hug: failed to load a sample after 8 resamples; last error: {last_err}")
++
++    def _build_item(self, idx: int) -> dict[str, Any]:
++        mode = self._choose_mode()
++        ep = int(np.searchsorted(self._valid_cum, int(idx), side="right"))
++        prev = int(self._valid_cum[ep - 1]) if ep > 0 else 0
++        start = int(self._ep_starts[ep]) + (int(idx) - prev)
++        episode = self._episodes[int(self._ep_vals[ep])]
++
++        timestamps = self._row_timestamp[start : start + self._chunk_length + 1].tolist()
++        video = self._load_video(episode, timestamps)
++        action = torch.from_numpy(np.ascontiguousarray(self._row_action[start : start + self._chunk_length])).float()
++
++        extras: dict[str, Any] = {}
++        if self._viewpoint == "concat_view":
++            extras["additional_view_description"] = (
++                "The top row shows the head-mounted camera view looking down at the box in front of the robot. "
++                "The bottom row contains two horizontally concatenated wrist-mounted camera views: "
++                "the left hand camera on the left and the right hand camera on the right."
++            )
++        task = self._tasks[int(self._row_task[start])]
++        return self._build_result(mode=mode, video=video, action=action, ai_caption=task, **extras)
++
++    def _load_video_key(self, episode: dict[str, Any], timestamps: list[float], key: str) -> torch.Tensor:
++        # lerobot is a heavy, optional ("train" extra) dependency; import lazily.
++        from lerobot.datasets.video_utils import decode_video_frames
++
++        from_ts = float(episode.get(f"videos/{key}/from_timestamp", 0.0))
++        return decode_video_frames(self._video_path(episode, key), [from_ts + ts for ts in timestamps], self._tolerance_s)
++
++    def _load_video(self, episode: dict[str, Any], timestamps: list[float]) -> torch.Tensor:
++        top = self._load_video_key(episode, timestamps, _HEAD_KEY)  # [T, C, H, W] in [0, 1]
++        if self._viewpoint == "ego_view":
++            return top
++        _, _, h_top, w_top = top.shape
++        size = (h_top // 2, w_top // 2)
++        left = F.interpolate(self._load_video_key(episode, timestamps, _HAND_LEFT_KEY), size=size, mode="bilinear")
++        right = F.interpolate(self._load_video_key(episode, timestamps, _HAND_RIGHT_KEY), size=size, mode="bilinear")
++        return torch.cat([top, torch.cat([left, right], dim=-1)], dim=-2)
+diff --git a/examples/launch_sft_action_policy_g1_hug_edge_smoke.sh b/examples/launch_sft_action_policy_g1_hug_edge_smoke.sh
+new file mode 100644
+index 0000000..a014de4
+--- /dev/null
++++ b/examples/launch_sft_action_policy_g1_hug_edge_smoke.sh
+@@ -0,0 +1,10 @@
++#!/usr/bin/env bash
++# LOCAL (ubr-g1): 4-GPU pipeline smoke of the G1 hug Edge recipe.
++TOML_FILE="${TOML_FILE:-examples/toml/sft_config/action_policy_g1_hug_edge_smoke.toml}"
++: "${BASE_CHECKPOINT_PATH:=examples/checkpoints/Cosmos3-Edge}"
++export G1_HUG_ROOT="${G1_HUG_ROOT:-}" G1_HUG_STATS="${G1_HUG_STATS:-$G1_HUG_ROOT/action_stats.json}"
++EXTRA_DATASET_CHECK='[[ -f "$G1_HUG_ROOT/meta/info.json" && -f "$G1_HUG_STATS" ]] || { echo "ERROR: G1_HUG_ROOT needs meta/info.json and G1_HUG_STATS a stats JSON" >&2; exit 1; }'
++TAIL_OVERRIDES=(
++    ${EXTRA_TAIL_OVERRIDES:-}
++)
++source "$(dirname "${BASH_SOURCE[0]}")/_sft_launcher_common.sh"
+diff --git a/examples/toml/sft_config/action_policy_g1_hug_edge_curve500_4gpu.toml b/examples/toml/sft_config/action_policy_g1_hug_edge_curve500_4gpu.toml
+new file mode 100644
+index 0000000..e59d5ef
+--- /dev/null
++++ b/examples/toml/sft_config/action_policy_g1_hug_edge_curve500_4gpu.toml
+@@ -0,0 +1,46 @@
++# LOCAL: G1 hug data-efficiency curve (v5 subsets, G1_HUG_EPISODES) on 4 GPUs: 500 iterations, LR cycle 500, gbs 2048 = 128 x 4 x grad_accum 4.
++# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++# SPDX-License-Identifier: OpenMDW-1.1
++
++# G1 hug action-policy SFT run config for the `action_policy_g1_hug_edge`
++# experiment.
++# Env: G1_HUG_ROOT, G1_HUG_STATS, BASE_CHECKPOINT_PATH, WAN_VAE_PATH, IMAGINAIRE_OUTPUT_ROOT.
++
++[job]
++task         = "vfm"
++experiment   = "action_policy_g1_hug_edge"
++project      = "cosmos3_action_g1"
++group        = "action_sft"
++name         = "action_policy_g1_hug_edge_v1_4gpu"
++wandb_mode   = "disabled"
++
++[model]
++precision = "bfloat16"
++max_num_tokens_after_packing = 74000
++
++[model.parallelism]
++data_parallel_shard_degree     = 4
++data_parallel_replicate_degree = 1    # LOCAL: one 8-GPU node
++
++[model.activation_checkpointing]
++mode           = "selective"
++save_ops_regex = ["fmha"]
++
++[model.tokenizer]
++vae_path = "${oc.env:WAN_VAE_PATH}"
++
++[optimizer]
++lr = 5.0e-05
++
++[scheduler]
++cycle_lengths = [500]
++warm_up_steps = [100]
++
++[trainer]
++max_iter        = 500
++logging_iter    = 25
++grad_accum_iter = 4       # global batch = 128 x 4 x 4 = 2048
++
++[checkpoint]
++load_path = "${oc.env:BASE_CHECKPOINT_PATH}"
++save_iter = 250
+diff --git a/examples/toml/sft_config/action_policy_g1_hug_edge_ego_smoke_b300.toml b/examples/toml/sft_config/action_policy_g1_hug_edge_ego_smoke_b300.toml
+new file mode 100644
+index 0000000..c8dbb3a
+--- /dev/null
++++ b/examples/toml/sft_config/action_policy_g1_hug_edge_ego_smoke_b300.toml
+@@ -0,0 +1,46 @@
++# B300 smoke copy of the ego v1 TOML: 30 iterations, grad_accum 1, no checkpoint (recipe step 6, optional first).
++# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++# SPDX-License-Identifier: OpenMDW-1.1
++
++# G1 hug action-policy SFT run config for the `action_policy_g1_hug_edge`
++# experiment.
++# Env: G1_HUG_ROOT, G1_HUG_STATS, BASE_CHECKPOINT_PATH, WAN_VAE_PATH, IMAGINAIRE_OUTPUT_ROOT.
++
++[job]
++task         = "vfm"
++experiment   = "action_policy_g1_hug_edge_ego"
++project      = "cosmos3_action_g1"
++group        = "action_sft"
++name         = "action_policy_g1_hug_edge_ego_smoke_b300"
++wandb_mode   = "disabled"
++
++[model]
++precision = "bfloat16"
++max_num_tokens_after_packing = 74000
++
++[model.parallelism]
++data_parallel_shard_degree     = 4
++data_parallel_replicate_degree = 1    # LOCAL: one 8-GPU node
++
++[model.activation_checkpointing]
++mode           = "selective"
++save_ops_regex = ["fmha"]
++
++[model.tokenizer]
++vae_path = "${oc.env:WAN_VAE_PATH}"
++
++[optimizer]
++lr = 5.0e-05
++
++[scheduler]
++cycle_lengths = [30]
++warm_up_steps = [0]
++
++[trainer]
++max_iter        = 30
++logging_iter    = 1
++grad_accum_iter = 1
++
++[checkpoint]
++load_path = "${oc.env:BASE_CHECKPOINT_PATH}"
++save_iter = 1000
+diff --git a/examples/toml/sft_config/action_policy_g1_hug_edge_ego_v1_4gpu.toml b/examples/toml/sft_config/action_policy_g1_hug_edge_ego_v1_4gpu.toml
+new file mode 100644
+index 0000000..198920c
+--- /dev/null
++++ b/examples/toml/sft_config/action_policy_g1_hug_edge_ego_v1_4gpu.toml
+@@ -0,0 +1,46 @@
++# G1 hug v1 run, HEAD CAMERA ONLY (ego_view), of the Edge recipe on 4 GPUs (2000 iterations, gbs 2048 = 128 x 4 x grad_accum 4).
++# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++# SPDX-License-Identifier: OpenMDW-1.1
++
++# G1 hug action-policy SFT run config for the `action_policy_g1_hug_edge`
++# experiment.
++# Env: G1_HUG_ROOT, G1_HUG_STATS, BASE_CHECKPOINT_PATH, WAN_VAE_PATH, IMAGINAIRE_OUTPUT_ROOT.
++
++[job]
++task         = "vfm"
++experiment   = "action_policy_g1_hug_edge_ego"
++project      = "cosmos3_action_g1"
++group        = "action_sft"
++name         = "action_policy_g1_hug_edge_ego_v1_4gpu"
++wandb_mode   = "disabled"
++
++[model]
++precision = "bfloat16"
++max_num_tokens_after_packing = 74000
++
++[model.parallelism]
++data_parallel_shard_degree     = 4
++data_parallel_replicate_degree = 1    # LOCAL: one 8-GPU node
++
++[model.activation_checkpointing]
++mode           = "selective"
++save_ops_regex = ["fmha"]
++
++[model.tokenizer]
++vae_path = "${oc.env:WAN_VAE_PATH}"
++
++[optimizer]
++lr = 5.0e-05
++
++[scheduler]
++cycle_lengths = [2000]
++warm_up_steps = [100]
++
++[trainer]
++max_iter        = 2000
++logging_iter    = 25
++grad_accum_iter = 4       # global batch = 128 x 4 x 4 = 2048
++
++[checkpoint]
++load_path = "${oc.env:BASE_CHECKPOINT_PATH}"
++save_iter = 500
+diff --git a/examples/toml/sft_config/action_policy_g1_hug_edge_smoke.toml b/examples/toml/sft_config/action_policy_g1_hug_edge_smoke.toml
+new file mode 100644
+index 0000000..b1bdd67
+--- /dev/null
++++ b/examples/toml/sft_config/action_policy_g1_hug_edge_smoke.toml
+@@ -0,0 +1,46 @@
++# LOCAL: G1 hug pipeline smoke of the Edge recipe on 4 GPUs (30 iterations, no checkpoint).
++# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++# SPDX-License-Identifier: OpenMDW-1.1
++
++# G1 hug action-policy SFT smoke config for the `action_policy_g1_hug_edge`
++# experiment.
++# Env: G1_HUG_ROOT, G1_HUG_STATS, BASE_CHECKPOINT_PATH, WAN_VAE_PATH, IMAGINAIRE_OUTPUT_ROOT.
++
++[job]
++task         = "vfm"
++experiment   = "action_policy_g1_hug_edge"
++project      = "cosmos3_action_g1"
++group        = "action_sft"
++name         = "action_policy_g1_hug_edge_smoke"
++wandb_mode   = "disabled"
++
++[model]
++precision = "bfloat16"
++max_num_tokens_after_packing = 74000
++
++[model.parallelism]
++data_parallel_shard_degree     = 4
++data_parallel_replicate_degree = 1    # LOCAL: one 8-GPU node
++
++[model.activation_checkpointing]
++mode           = "selective"
++save_ops_regex = ["fmha"]
++
++[model.tokenizer]
++vae_path = "${oc.env:WAN_VAE_PATH}"
++
++[optimizer]
++lr = 5.0e-05
++
++[scheduler]
++cycle_lengths = [30]
++warm_up_steps = [0]
++
++[trainer]
++max_iter        = 30
++logging_iter    = 1
++grad_accum_iter = 1
++
++[checkpoint]
++load_path = "${oc.env:BASE_CHECKPOINT_PATH}"
++save_iter = 1000
+diff --git a/examples/toml/sft_config/action_policy_g1_hug_edge_v1_4gpu.toml b/examples/toml/sft_config/action_policy_g1_hug_edge_v1_4gpu.toml
+new file mode 100644
+index 0000000..d2b46fb
+--- /dev/null
++++ b/examples/toml/sft_config/action_policy_g1_hug_edge_v1_4gpu.toml
+@@ -0,0 +1,46 @@
++# LOCAL: G1 hug v1 run of the Edge recipe on 4 GPUs (2000 iterations, gbs 2048 = 128 x 4 x grad_accum 4).
++# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++# SPDX-License-Identifier: OpenMDW-1.1
++
++# G1 hug action-policy SFT run config for the `action_policy_g1_hug_edge`
++# experiment.
++# Env: G1_HUG_ROOT, G1_HUG_STATS, BASE_CHECKPOINT_PATH, WAN_VAE_PATH, IMAGINAIRE_OUTPUT_ROOT.
++
++[job]
++task         = "vfm"
++experiment   = "action_policy_g1_hug_edge"
++project      = "cosmos3_action_g1"
++group        = "action_sft"
++name         = "action_policy_g1_hug_edge_v1_4gpu"
++wandb_mode   = "disabled"
++
++[model]
++precision = "bfloat16"
++max_num_tokens_after_packing = 74000
++
++[model.parallelism]
++data_parallel_shard_degree     = 4
++data_parallel_replicate_degree = 1    # LOCAL: one 8-GPU node
++
++[model.activation_checkpointing]
++mode           = "selective"
++save_ops_regex = ["fmha"]
++
++[model.tokenizer]
++vae_path = "${oc.env:WAN_VAE_PATH}"
++
++[optimizer]
++lr = 5.0e-05
++
++[scheduler]
++cycle_lengths = [2000]
++warm_up_steps = [100]
++
++[trainer]
++max_iter        = 2000
++logging_iter    = 25
++grad_accum_iter = 4       # global batch = 128 x 4 x 4 = 2048
++
++[checkpoint]
++load_path = "${oc.env:BASE_CHECKPOINT_PATH}"
++save_iter = 500
+diff --git a/examples/toml/sft_config/action_policy_g1_hug_edge_v5full_4gpu.toml b/examples/toml/sft_config/action_policy_g1_hug_edge_v5full_4gpu.toml
+new file mode 100644
+index 0000000..fe31cab
+--- /dev/null
++++ b/examples/toml/sft_config/action_policy_g1_hug_edge_v5full_4gpu.toml
+@@ -0,0 +1,46 @@
++# LOCAL: G1 hug v5 full run on 4 GPUs (2000 iterations, gbs 2048 = 128 x 4 x grad_accum 4); as v1_4gpu but checkpoints every 250 (node failures).
++# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++# SPDX-License-Identifier: OpenMDW-1.1
++
++# G1 hug action-policy SFT run config for the `action_policy_g1_hug_edge`
++# experiment.
++# Env: G1_HUG_ROOT, G1_HUG_STATS, BASE_CHECKPOINT_PATH, WAN_VAE_PATH, IMAGINAIRE_OUTPUT_ROOT.
++
++[job]
++task         = "vfm"
++experiment   = "action_policy_g1_hug_edge"
++project      = "cosmos3_action_g1"
++group        = "action_sft"
++name         = "action_policy_g1_hug_edge_v1_4gpu"
++wandb_mode   = "disabled"
++
++[model]
++precision = "bfloat16"
++max_num_tokens_after_packing = 74000
++
++[model.parallelism]
++data_parallel_shard_degree     = 4
++data_parallel_replicate_degree = 1    # LOCAL: one 8-GPU node
++
++[model.activation_checkpointing]
++mode           = "selective"
++save_ops_regex = ["fmha"]
++
++[model.tokenizer]
++vae_path = "${oc.env:WAN_VAE_PATH}"
++
++[optimizer]
++lr = 5.0e-05
++
++[scheduler]
++cycle_lengths = [2000]
++warm_up_steps = [100]
++
++[trainer]
++max_iter        = 2000
++logging_iter    = 25
++grad_accum_iter = 4       # global batch = 128 x 4 x 4 = 2048
++
++[checkpoint]
++load_path = "${oc.env:BASE_CHECKPOINT_PATH}"
++save_iter = 250
+diff --git a/examples/toml/sft_config/action_policy_g1_hug_edge_v5full_fast_4gpu.toml b/examples/toml/sft_config/action_policy_g1_hug_edge_v5full_fast_4gpu.toml
+new file mode 100644
+index 0000000..310e494
+--- /dev/null
++++ b/examples/toml/sft_config/action_policy_g1_hug_edge_v5full_fast_4gpu.toml
+@@ -0,0 +1,46 @@
++# LOCAL: v5full_4gpu, faster on B300 at the same global batch 2048: no activation checkpointing, 256 samples x 148000 tokens per micro-batch, grad_accum 2. Needs G1_MAX_SAMPLES_PER_BATCH=256.
++# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++# SPDX-License-Identifier: OpenMDW-1.1
++
++# G1 hug action-policy SFT run config for the `action_policy_g1_hug_edge`
++# experiment.
++# Env: G1_HUG_ROOT, G1_HUG_STATS, BASE_CHECKPOINT_PATH, WAN_VAE_PATH, IMAGINAIRE_OUTPUT_ROOT.
++
++[job]
++task         = "vfm"
++experiment   = "action_policy_g1_hug_edge"
++project      = "cosmos3_action_g1"
++group        = "action_sft"
++name         = "action_policy_g1_hug_edge_v1_4gpu"
++wandb_mode   = "disabled"
++
++[model]
++precision = "bfloat16"
++max_num_tokens_after_packing = 148000
++
++[model.parallelism]
++data_parallel_shard_degree     = 4
++data_parallel_replicate_degree = 1    # LOCAL: one 8-GPU node
++
++[model.activation_checkpointing]
++mode           = "none"
++save_ops_regex = ["fmha"]
++
++[model.tokenizer]
++vae_path = "${oc.env:WAN_VAE_PATH}"
++
++[optimizer]
++lr = 5.0e-05
++
++[scheduler]
++cycle_lengths = [2000]
++warm_up_steps = [100]
++
++[trainer]
++max_iter        = 2000
++logging_iter    = 25
++grad_accum_iter = 2       # global batch = 256 x 4 x 2 = 2048 (needs G1_MAX_SAMPLES_PER_BATCH=256)
++
++[checkpoint]
++load_path = "${oc.env:BASE_CHECKPOINT_PATH}"
++save_iter = 250
+diff --git a/examples/toml/sft_config/action_policy_g1_hug_edge_v5full_noac_4gpu.toml b/examples/toml/sft_config/action_policy_g1_hug_edge_v5full_noac_4gpu.toml
+new file mode 100644
+index 0000000..8d51abf
+--- /dev/null
++++ b/examples/toml/sft_config/action_policy_g1_hug_edge_v5full_noac_4gpu.toml
+@@ -0,0 +1,46 @@
++# LOCAL: v5full_4gpu with activation checkpointing off (same batch 128 x 4 x grad_accum 4 = 2048). 256 per micro-batch without AC OOMed on B300 (266 of 268 GB).
++# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++# SPDX-License-Identifier: OpenMDW-1.1
++
++# G1 hug action-policy SFT run config for the `action_policy_g1_hug_edge`
++# experiment.
++# Env: G1_HUG_ROOT, G1_HUG_STATS, BASE_CHECKPOINT_PATH, WAN_VAE_PATH, IMAGINAIRE_OUTPUT_ROOT.
++
++[job]
++task         = "vfm"
++experiment   = "action_policy_g1_hug_edge"
++project      = "cosmos3_action_g1"
++group        = "action_sft"
++name         = "action_policy_g1_hug_edge_v1_4gpu"
++wandb_mode   = "disabled"
++
++[model]
++precision = "bfloat16"
++max_num_tokens_after_packing = 74000
++
++[model.parallelism]
++data_parallel_shard_degree     = 4
++data_parallel_replicate_degree = 1    # LOCAL: one 8-GPU node
++
++[model.activation_checkpointing]
++mode           = "none"
++save_ops_regex = ["fmha"]
++
++[model.tokenizer]
++vae_path = "${oc.env:WAN_VAE_PATH}"
++
++[optimizer]
++lr = 5.0e-05
++
++[scheduler]
++cycle_lengths = [2000]
++warm_up_steps = [100]
++
++[trainer]
++max_iter        = 2000
++logging_iter    = 25
++grad_accum_iter = 4       # global batch = 128 x 4 x 4 = 2048
++
++[checkpoint]
++load_path = "${oc.env:BASE_CHECKPOINT_PATH}"
++save_iter = 250

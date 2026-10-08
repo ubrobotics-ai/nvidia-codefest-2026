@@ -1,0 +1,46 @@
+# LOCAL: G1 hug v1 run of the Edge recipe on 4 GPUs (2000 iterations, gbs 2048 = 128 x 4 x grad_accum 4).
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: OpenMDW-1.1
+
+# G1 hug action-policy SFT run config for the `action_policy_g1_hug_edge`
+# experiment.
+# Env: G1_HUG_ROOT, G1_HUG_STATS, BASE_CHECKPOINT_PATH, WAN_VAE_PATH, IMAGINAIRE_OUTPUT_ROOT.
+
+[job]
+task         = "vfm"
+experiment   = "action_policy_g1_hug_edge"
+project      = "cosmos3_action_g1"
+group        = "action_sft"
+name         = "action_policy_g1_hug_edge_v1_4gpu"
+wandb_mode   = "disabled"
+
+[model]
+precision = "bfloat16"
+max_num_tokens_after_packing = 74000
+
+[model.parallelism]
+data_parallel_shard_degree     = 4
+data_parallel_replicate_degree = 1    # LOCAL: one 8-GPU node
+
+[model.activation_checkpointing]
+mode           = "selective"
+save_ops_regex = ["fmha"]
+
+[model.tokenizer]
+vae_path = "${oc.env:WAN_VAE_PATH}"
+
+[optimizer]
+lr = 5.0e-05
+
+[scheduler]
+cycle_lengths = [2000]
+warm_up_steps = [100]
+
+[trainer]
+max_iter        = 2000
+logging_iter    = 25
+grad_accum_iter = 4       # global batch = 128 x 4 x 4 = 2048
+
+[checkpoint]
+load_path = "${oc.env:BASE_CHECKPOINT_PATH}"
+save_iter = 500
