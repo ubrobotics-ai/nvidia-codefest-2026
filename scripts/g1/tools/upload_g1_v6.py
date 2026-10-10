@@ -3,6 +3,9 @@ went public (Filipe, 2026-10-05: "Publish as public storage"; card approved the 
 PRIVATE (Filipe: "keep this one private for now"). Usage: upload_g1_v6.py ITER_DIR REPO N ITERS CURVE(0|1) EPISODES_JSON"""
 import json, os, shutil, sys, time
 from huggingface_hub import HfApi
+# Uploads on hold (2026-10-09, Filipe: visibility of v6-n971 and the v5 N = 64 2k run not decided): skip while this file exists.
+if os.path.exists("/storage/hackathon_teams/omc-team15/codefest/g1_cosmos/HOLD_UPLOADS"):
+    raise SystemExit("uploads on hold (HOLD_UPLOADS present); checkpoint stays on the cluster")
 
 it_dir, rid, n, iters, curve, eps = sys.argv[1].rstrip("/"), sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5] == "1", sys.argv[6]
 G = "/storage/hackathon_teams/omc-team15/codefest/g1_cosmos"
